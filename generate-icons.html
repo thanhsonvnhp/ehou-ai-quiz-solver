@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generate Extension Icons</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background: #f5f5f5;
+      text-align: center;
+    }
+    h1 {
+      color: #667eea;
+    }
+    .instructions {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 600px;
+      margin: 20px auto;
+      text-align: left;
+    }
+    .canvas-container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 30px 0;
+    }
+    canvas {
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    .success {
+      color: #4caf50;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🤖 Tạo Icons cho Extension</h1>
+  
+  <div class="instructions">
+    <h3>📋 Hướng dẫn:</h3>
+    <ol>
+      <li>Click nút "Tạo Icons" bên dưới</li>
+      <li>3 file PNG sẽ được tải về tự động</li>
+      <li>Đặt các file vào thư mục extension:
+        <ul>
+          <li>icon16.png</li>
+          <li>icon48.png</li>
+          <li>icon128.png</li>
+        </ul>
+      </li>
+      <li>Reload extension trong Chrome</li>
+    </ol>
+  </div>
+
+  <button onclick="generateAllIcons()">🎨 Tạo Icons</button>
+
+  <div class="canvas-container">
+    <div>
+      <canvas id="canvas16" width="16" height="16"></canvas>
+      <p>16x16</p>
+    </div>
+    <div>
+      <canvas id="canvas48" width="48" height="48"></canvas>
+      <p>48x48</p>
+    </div>
+    <div>
+      <canvas id="canvas128" width="128" height="128"></canvas>
+      <p>128x128</p>
+    </div>
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    function createIcon(canvasId, size) {
+      return new Promise((resolve) => {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, size, size);
+        
+        // Background gradient
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+        ctx.fillStyle = gradient;
+        
+        // Rounded corners
+        ctx.beginPath();
+        const radius = size * 0.15;
+        ctx.moveTo(radius, 0);
+        ctx.lineTo(size - radius, 0);
+        ctx.quadraticCurveTo(size, 0, size, radius);
+        ctx.lineTo(size, size - radius);
+        ctx.quadraticCurveTo(size, size, size - radius, size);
+        ctx.lineTo(radius, size);
+        ctx.quadraticCurveTo(0, size, 0, size - radius);
+        ctx.lineTo(0, radius);
+        ctx.quadraticCurveTo(0, 0, radius, 0);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Robot emoji
+        ctx.font = `${size * 0.65}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🤖', size / 2, size / 2);
+        
+        // Download
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `icon${size}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          resolve();
+        });
+      });
+    }
+    
+    async function generateAllIcons() {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = '⏳ Đang tạo icons...';
+      
+      try {
+        await createIcon('canvas16', 16);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        await createIcon('canvas48', 48);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        await createIcon('canvas128', 128);
+        
+        statusDiv.innerHTML = '<div class="success">✅ Đã tạo và tải về 3 icons thành công!</div>';
+      } catch (error) {
+        statusDiv.innerHTML = `<div style="color: red;">❌ Lỗi: ${error.message}</div>`;
+      }
+    }
+    
+    // Draw preview on load
+    window.addEventListener('load', () => {
+      ['canvas16', 'canvas48', 'canvas128'].forEach(id => {
+        const size = parseInt(id.replace('canvas', ''));
+        const canvas = document.getElementById(id);
+        const ctx = canvas.getContext('2d');
+        
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+        ctx.fillStyle = gradient;
+        
+        ctx.beginPath();
+        const radius = size * 0.15;
+        ctx.moveTo(radius, 0);
+        ctx.lineTo(size - radius, 0);
+        ctx.quadraticCurveTo(size, 0, size, radius);
+        ctx.lineTo(size, size - radius);
+        ctx.quadraticCurveTo(size, size, size - radius, size);
+        ctx.lineTo(radius, size);
+        ctx.quadraticCurveTo(0, size, 0, size - radius);
+        ctx.lineTo(0, radius);
+        ctx.quadraticCurveTo(0, 0, radius, 0);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.font = `${size * 0.65}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🤖', size / 2, size / 2);
+      });
+    });
+  </script>
+</body>
+</html>

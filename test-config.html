@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Config</title>
+</head>
+
+<body>
+    <h1>Test CONFIG Loading</h1>
+    <div id="output"></div>
+
+    <script src="config.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        if (typeof CONFIG !== 'undefined') {
+            output.innerHTML = `
+        <h2>✅ CONFIG loaded successfully!</h2>
+        <pre>${JSON.stringify(CONFIG, null, 2)}</pre>
+        
+        <h3>Test getDefaultSettings:</h3>
+        <p>Gemini: <code>${JSON.stringify(CONFIG.getDefaultSettings('gemini'), null, 2)}</code></p>
+        <p>OpenAI: <code>${JSON.stringify(CONFIG.getDefaultSettings('openai'), null, 2)}</code></p>
+        
+        <h3>Test getGeminiEndpoint:</h3>
+        <p>gemini-2.5-flash: <code>${CONFIG.getGeminiEndpoint('gemini-2.5-flash')}</code></p>
+      `;
+        } else {
+            output.innerHTML = '<h2>❌ CONFIG not loaded!</h2>';
+        }
+    </script>
+</body>
+
+</html>

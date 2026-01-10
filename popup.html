@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Quiz Solver</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 400px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+    }
+
+    .container {
+      background: white;
+      border-radius: 0;
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .main-content {
+      padding: 20px;
+    }
+
+    .section {
+      margin-bottom: 15px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      transition: border-color 0.3s;
+    }
+
+    .input-group input:focus,
+    .input-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #666;
+      margin-top: 10px;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .status {
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .status.info {
+      background: #e3f2fd;
+      color: #1976d2;
+      display: block;
+    }
+
+    .status.success {
+      background: #e8f5e9;
+      color: #388e3c;
+      display: block;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #d32f2f;
+      display: block;
+    }
+
+    .status.warning {
+      background: #fff3e0;
+      color: #f57c00;
+      display: block;
+    }
+
+    .results {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+
+    .question-result {
+      background: #f9f9f9;
+      border-left: 4px solid #667eea;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+    }
+
+    .question-result .question-number {
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 8px;
+    }
+
+    .question-result .answer {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+
+    .question-result .explanation {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .settings-toggle {
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    .settings-toggle a {
+      color: #667eea;
+      text-decoration: none;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .settings-toggle a:hover {
+      text-decoration: underline;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #999;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🤖 AI Quiz Solver</h1>
+      <p>Giải đề trắc nghiệm Ehou bằng AI</p>
+    </div>
+    <div class="main-content">
+      <div id="settingsSection" class="section hidden">
+        <div class="section-title">⚙️ Cấu hình API</div>
+        <div class="input-group">
+          <label>AI Provider</label>
+          <select id="provider">
+            <option value="openai">OpenAI (ChatGPT)</option>
+            <option value="gemini">Google Gemini</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>API Key *</label>
+          <input type="password" id="apiKey" placeholder="Nhập API Key của bạn">
+          <small style="font-size: 11px; color: #999; margin-top: 5px; display: block;">OpenAI: sk-proj-... | Gemini:
+            AIza...</small>
+        </div>
+        <div class="input-group" id="endpointGroup">
+          <label>API Endpoint (Optional)</label>
+          <input type="text" id="apiEndpoint" placeholder="https://api.openai.com/v1/chat/completions">
+        </div>
+        <div class="input-group">
+          <label>Model</label>
+          <select id="model">
+            <optgroup label="OpenAI" id="openaiModels">
+              <option value="gpt-4o-mini">GPT-4O Mini (Khuyên dùng)</option>
+              <option value="gpt-4o">GPT-4O</option>
+              <option value="gpt-4-turbo">GPT-4 Turbo</option>
+              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            </optgroup>
+            <optgroup label="Google Gemini" id="geminiModels" style="display:none;">
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng)</option>
+              <option value="gemini-flash-latest">Gemini Flash Latest (Thử nghiệm)</option>
+              <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+              <option value="gemini-pro">Gemini Pro (Legacy)</option>
+            </optgroup>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="saveSettings">💾 Lưu cấu hình</button>
+      </div>
+      <div id="mainSection" class="section">
+        <button class="btn btn-primary" id="solveBtn"><span>🚀 Giải bằng AI</span></button>
+        <button class="btn btn-secondary hidden" id="stopBtn"
+          style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: white;">⛔ Dừng lại</button>
+        <button class="btn btn-secondary" id="clearBtn">🗑️ Xóa kết quả</button>
+        <div id="status" class="status"></div>
+        <div id="stats" class="stats hidden">
+          <div class="stat-item">
+            <div class="stat-value" id="totalQuestions">0</div>
+            <div class="stat-label">Câu hỏi</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="solvedQuestions">0</div>
+            <div class="stat-label">Đã giải</div>
+          </div>
+        </div>
+        <div id="results" class="results"></div>
+      </div>
+      <div class="settings-toggle"><a id="toggleSettings">⚙️ Cấu hình API</a></div>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+
+</html>

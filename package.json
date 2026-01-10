@@ -1,0 +1,21 @@
+{
+  "name": "ehou-ai-quiz-solver",
+  "version": "1.0.0",
+  "description": "Chrome Extension hỗ trợ giải đề trắc nghiệm ehou.edu.vn bằng AI",
+  "author": "Your Name",
+  "license": "MIT",
+  "keywords": [
+    "chrome-extension",
+    "ai",
+    "quiz",
+    "ehou",
+    "education"
+  ],
+  "scripts": {
+    "build": "echo 'No build process needed - pure vanilla JS'",
+    "dev": "echo 'Open chrome://extensions and load unpacked'",
+    "lint": "echo 'No linter configured'"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

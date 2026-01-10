@@ -1,0 +1,42 @@
+# Ignore node_modules (nếu có cài package sau này)
+node_modules/
+
+# Ignore build outputs (nếu có build process)
+dist/
+build/
+
+# Ignore IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Ignore OS files
+Thumbs.db
+desktop.ini
+
+# Ignore temporary files
+*.tmp
+*.temp
+*.log
+
+# Ignore API keys (quan trọng!)
+.env
+.env.local
+secrets.json
+api-keys.txt
+
+# Ignore zip files (khi đóng gói extension)
+*.zip
+*.crx
+*.pem
+
+# Ignore test files (nếu không cần commit)
+# test-page.html
+
+# Keep icons (uncomment nếu muốn ignore)
+# icon16.png
+# icon48.png
+# icon128.png

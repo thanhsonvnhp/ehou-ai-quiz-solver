@@ -3,22 +3,22 @@
 
 // Hardcode config values
 const CONFIG = {
-  DEFAULT_PROVIDER: 'gemini',//'openai',
+  DEFAULT_PROVIDER: 'gemini',
   RATE_LIMIT: {
-    MIN_REQUEST_INTERVAL: 5000,
+    MIN_REQUEST_INTERVAL: 10000,
     REQUEST_TIMEOUT: 30000
   },
   GEMINI: {
     API_VERSION_V1BETA: 'v1beta',
     BASE_URL: 'https://generativelanguage.googleapis.com',
     TEMPERATURE: 0.3,
-    MAX_OUTPUT_TOKENS: 500
+    MAX_OUTPUT_TOKENS: 5000
   },
   OPENAI: {
     DEFAULT_ENDPOINT: 'https://api.openai.com/v1/chat/completions',
     DEFAULT_MODEL: 'gpt-4o-mini',
     TEMPERATURE: 0.3,
-    MAX_TOKENS: 500
+    MAX_TOKENS: 5000
   },
   MESSAGES: {
     NO_API_KEY: 'Chưa cấu hình API Key. Vui lòng cấu hình trong popup.',
@@ -39,7 +39,7 @@ CONFIG.getGeminiEndpoint = function (model) {
 CONFIG.getDefaultSettings = function (provider) {
   if (provider === 'gemini') {
     return {
-      model: 'gemini-2.5-flash', // Stable model with good free tier
+      model: 'gemini-3-flash-preview', // Latest model with best free tier
       apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models', // Gemini endpoint is built dynamically from model
       provider: 'gemini'
     };
@@ -134,13 +134,14 @@ Các đáp án:
     prompt += `${label}. ${answer.text}\n`;
   });
 
-  prompt += `\nYêu cầu: Trả kết quả CHÍNH XÁC dưới dạng JSON với cấu trúc:
+  prompt += `\nYêu cầu quan trọng:
+1. Trả về kết quả dưới dạng JSON thuần (raw JSON).
+2. KHÔNG dùng markdown block (\`\`\`json).
+3. Cấu trúc JSON bắt buộc:
 {
-  "answer": "A",
-  "explanation": "Giải thích ngắn gọn tại sao đáp án này đúng"
-}
-
-CHỈ TRẢ VỀ JSON, KHÔNG THÊM BẤT KỲ TEXT NÀO KHÁC.`;
+  "answer": "Đáp án đúng (chỉ một chữ cái A, B, C, D...)",
+  "explanation": "Giải thích ngắn gọn tại sao đúng"
+}`;
 
   return prompt;
 }
@@ -216,13 +217,14 @@ async function callOpenAIAPI(settings, prompt, controller) {
       messages: [
         {
           role: 'system',
-          content: 'Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Luôn trả lời chính xác dưới dạng JSON.'
+          content: 'Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Nhiệm vụ của bạn là trả về kết quả dưới dạng JSON hợp lệ.'
         },
         {
           role: 'user',
           content: prompt
         }
       ],
+      response_format: { type: "json_object" }, // Bắt buộc trả về JSON
       temperature: CONFIG.OPENAI.TEMPERATURE,
       max_tokens: CONFIG.OPENAI.MAX_TOKENS
     }),
@@ -235,9 +237,25 @@ async function callOpenAIAPI(settings, prompt, controller) {
   }
 
   const data = await response.json();
+  console.log('📦 Full OpenAI API response:', JSON.stringify(data, null, 2));
+
+  // Kiểm tra xem response có chứa error không
+  if (data.error) {
+    console.error('❌ Error in OpenAI response:', data.error);
+    throw new Error(data.error.message || 'OpenAI API returned error in response');
+  }
+
   const content = data.choices?.[0]?.message?.content;
 
-  if (!content) {
+  console.log('📝 Extracted content:', content);
+  console.log('📏 Content length:', content?.length || 0);
+
+  const finishReason = data.choices?.[0]?.finish_reason;
+  console.log('🏁 Finish reason:', finishReason);
+
+  // Validate content trước khi parse
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    console.error('❌ No valid content in response:', data);
     throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);
   }
 
@@ -259,12 +277,13 @@ async function callGeminiAPI(settings, prompt, controller) {
     body: JSON.stringify({
       contents: [{
         parts: [{
-          text: `Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Luôn trả lời chính xác dưới dạng JSON.\n\n${prompt}`
+          text: `Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Hãy trả lời dưới dạng JSON.\n\n${prompt}`
         }]
       }],
       generationConfig: {
         temperature: CONFIG.GEMINI.TEMPERATURE,
-        maxOutputTokens: CONFIG.GEMINI.MAX_OUTPUT_TOKENS
+        maxOutputTokens: CONFIG.GEMINI.MAX_OUTPUT_TOKENS,
+        responseMimeType: "application/json" // Bắt buộc trả về JSON (chỉ hoạt động với Gemini 1.5 Flash/Pro)
       }
     }),
     signal: controller.signal
@@ -276,6 +295,7 @@ async function callGeminiAPI(settings, prompt, controller) {
 
     // Xử lý lỗi quota cụ thể
     if (response.status === 429 || errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {
+      await sleep(60_000); // chờ 1 phút trước khi tiếp tục
       throw new Error(`${CONFIG.MESSAGES.GEMINI_QUOTA_ERROR}\n\nChi tiết: ${errorMessage}`);
     }
 
@@ -284,13 +304,37 @@ async function callGeminiAPI(settings, prompt, controller) {
       throw new Error(`${CONFIG.MESSAGES.GEMINI_AUTH_ERROR}\n\nChi tiết: ${errorMessage}`);
     }
 
-    throw new Error(errorMessage || `Gemini API Error: ${response.status}`);
+    // QUAN TRỌNG: Ném exception để dừng execution ngay lập tức
+    const error = new Error(errorMessage || `Gemini API Error: ${response.status}`);
+    console.error('❌ Gemini API Error:', error);
+    throw error;
   }
 
   const data = await response.json();
+  console.log('📦 Full Gemini API response:', JSON.stringify(data, null, 2));
+
+  // Kiểm tra xem response có chứa error không (một số API trả về error trong response.ok = true)
+  if (data.error) {
+    console.error('❌ Error in Gemini response:', data.error);
+    throw new Error(data.error.message || 'Gemini API returned error in response');
+  }
+
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-  if (!content) {
+  console.log('📝 Extracted content:', content);
+  console.log('📏 Content length:', content?.length || 0);
+
+  // Kiểm tra xem có bị cắt không (finishReason)
+  const finishReason = data.candidates?.[0]?.finishReason;
+  console.log('🏁 Finish reason:', finishReason);
+
+  if (finishReason && finishReason !== 'STOP') {
+    console.warn('⚠️ Response may be incomplete. Finish reason:', finishReason);
+  }
+
+  // Validate content trước khi parse
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    console.error('❌ No valid content in response:', data);
     throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);
   }
 
@@ -300,26 +344,50 @@ async function callGeminiAPI(settings, prompt, controller) {
 // Parse response từ AI
 function parseAIResponse(content) {
   try {
-    // Loại bỏ markdown code block nếu có
+    console.log('🔍 Raw AI response:', content);
+
     let jsonStr = content.trim();
-    if (jsonStr.startsWith('```json')) {
-      jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    } else if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/```\n?/g, '');
+
+    // BƯỚC 1: Tìm vị trí bắt đầu và kết thúc của JSON object TRỰC TIẾP từ raw content
+    const jsonStart = jsonStr.indexOf('{');
+    const jsonEnd = jsonStr.lastIndexOf('}');
+
+    if (jsonStart === -1 || jsonEnd === -1 || jsonStart > jsonEnd) {
+      console.error('❌ Không tìm thấy JSON object hợp lệ trong response');
+      console.error('📄 Content:', content);
+      throw new Error('Response không chứa JSON object hợp lệ');
     }
 
+    // BƯỚC 2: Trích xuất chỉ phần JSON (bỏ qua markdown và text thừa)
+    jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+
+    console.log('🔧 Extracted JSON string:', jsonStr);
+
+    // BƯỚC 3: Parse JSON
     const parsed = JSON.parse(jsonStr);
 
+    console.log('✅ Parsed JSON:', parsed);
+
+    // BƯỚC 4: Validate
     if (!parsed.answer || !parsed.explanation) {
-      throw new Error('JSON thiếu trường bắt buộc');
+      throw new Error('JSON thiếu trường bắt buộc (answer hoặc explanation)');
     }
 
-    // Chuẩn hóa answer thành chữ hoa
+    // BƯỚC 5: Chuẩn hóa answer thành chữ hoa
     parsed.answer = parsed.answer.toUpperCase().trim();
 
     return parsed;
   } catch (error) {
-    throw new Error(`Không thể parse kết quả từ AI: ${error.message}`);
+    console.error('❌ Parse error:', error);
+    console.error('📄 Original content:', content);
+
+    // Hiển thị error message rõ ràng hơn
+    let errorMsg = `Không thể parse kết quả từ AI: ${error.message}`;
+    if (content && content.length > 0) {
+      errorMsg += `\n\nNội dung gốc (${content.length} ký tự):\n${content}}`;
+    }
+
+    throw new Error(errorMsg);
   }
 }
 

@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === 'highlightAnswer') {
     try {
-      highlightCorrectAnswer(request.questionIndex, request.answerLabel);
+      highlightCorrectAnswer(request.questionIndex, request.answerLabel, request.autoCheck);
       sendResponse({ success: true });
     } catch (error) {
       sendResponse({ success: false, error: error.message });
@@ -79,6 +79,7 @@ function extractSingleQuestion(questionEl, index) {
 
   // Lấy các đáp án
   const answers = [];
+  let hasAnswer = false; // Kiểm tra xem đã có đáp án được chọn chưa
   const answerEls = questionEl.querySelectorAll('.answer .r0, .answer .r1');
 
   answerEls.forEach((answerEl) => {
@@ -89,6 +90,11 @@ function extractSingleQuestion(questionEl, index) {
       const answerText = cleanText(label.innerText || label.textContent);
       // Loại bỏ ký tự đầu (a., b., c., d.) nếu có
       const cleanedAnswer = answerText.replace(/^[a-z]\.\s*/i, '');
+
+      // Kiểm tra xem radio button này đã được chọn chưa
+      if (radioInput.checked) {
+        hasAnswer = true;
+      }
 
       answers.push({
         value: radioInput.value,
@@ -107,6 +113,7 @@ function extractSingleQuestion(questionEl, index) {
     questionNumber: questionNumber,
     question: questionText,
     answers: answers,
+    hasAnswer: hasAnswer, // Thêm flag để popup biết câu này đã có đáp án
     element: questionEl
   }
 
@@ -124,7 +131,7 @@ function cleanText(text) {
 }
 
 // Highlight đáp án đúng
-function highlightCorrectAnswer(questionIndex, answerLabel) {
+function highlightCorrectAnswer(questionIndex, answerLabel, autoCheck = false) {
   const questions = document.querySelectorAll('.que.multichoice, .que');
 
   if (questionIndex < 0 || questionIndex >= questions.length) {
@@ -145,6 +152,17 @@ function highlightCorrectAnswer(questionIndex, answerLabel) {
 
     // Thêm class highlight
     targetAnswer.classList.add('ai-highlight-correct');
+
+    // Tự động tick checkbox nếu autoCheck = true
+    if (autoCheck) {
+      const radioInput = targetAnswer.querySelector('input[type="radio"]');
+      if (radioInput && !radioInput.checked) {
+        radioInput.checked = true;
+        // Trigger change event để form nhận biết thay đổi
+        radioInput.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log(`✅ Auto-checked answer ${answerLabel} for question ${questionIndex + 1}`);
+      }
+    }
 
     // Cuộn đến câu hỏi
     questionEl.scrollIntoView({ behavior: 'smooth', block: 'center' });

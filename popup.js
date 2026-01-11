@@ -36,8 +36,35 @@ providerSelect.addEventListener('change', handleProviderChange);
 init();
 
 function init() {
+  populateModels();
   loadSettings();
   checkCurrentTab();
+}
+
+// Populate models từ CONFIG
+function populateModels() {
+  const openaiModels = document.getElementById('openaiModels');
+  const geminiModels = document.getElementById('geminiModels');
+
+  // Clear existing options
+  openaiModels.innerHTML = '';
+  geminiModels.innerHTML = '';
+
+  // Populate OpenAI models
+  CONFIG.OPENAI.MODELS.forEach(model => {
+    const option = document.createElement('option');
+    option.value = model.value;
+    option.textContent = model.label;
+    openaiModels.appendChild(option);
+  });
+
+  // Populate Gemini models
+  CONFIG.GEMINI.MODELS.forEach(model => {
+    const option = document.createElement('option');
+    option.value = model.value;
+    option.textContent = model.label;
+    geminiModels.appendChild(option);
+  });
 }
 
 // Load cấu hình từ storage
@@ -171,7 +198,15 @@ async function handleSolveQuestions() {
     totalQuestionsSpan.textContent = questions.length;
     statsDiv.classList.remove('hidden');
 
-    showStatus(`✓ Tìm thấy ${questions.length} câu hỏi. Đang gửi cho AI (1 câu/lần)...`, 'info');
+    // Đếm số câu cần giải (chưa có đáp án)
+    const questionsToSolve = questions.filter(q => !q.hasAnswer);
+    const skippedCount = questions.length - questionsToSolve.length;
+    
+    if (skippedCount > 0) {
+      showStatus(`✓ Tìm thấy ${questions.length} câu hỏi (${skippedCount} câu đã có đáp án, bỏ qua). Đang gửi ${questionsToSolve.length} câu cho AI...`, 'info');
+    } else {
+      showStatus(`✓ Tìm thấy ${questions.length} câu hỏi. Đang gửi cho AI (1 câu/lần)...`, 'info');
+    }
 
     // Bước 2: Giải từng câu hỏi với AI (tuần tự, không song song)
     for (let i = 0; i < questions.length; i++) {
@@ -182,6 +217,13 @@ async function handleSolveQuestions() {
       }
 
       const question = questions[i];
+
+      // Skip câu hỏi đã có đáp án
+      if (question.hasAnswer) {
+        console.log(`⏭️ Skip câu ${i + 1} - đã có đáp án`);
+        displaySkipped(question);
+        continue;
+      }
 
       showStatus(`🤖 Đang giải câu ${i + 1}/${questions.length}... (Đợi 5s giữa mỗi câu)`, 'info');
 
@@ -323,7 +365,7 @@ function solveQuestionWithAI(question) {
 }
 
 // Highlight đáp án trên trang
-function highlightAnswer(questionIndex, answerLabel) {
+function highlightAnswer(questionIndex, answerLabel, autoCheck = true) {
   return new Promise((resolve, reject) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       chrome.tabs.sendMessage(
@@ -331,7 +373,8 @@ function highlightAnswer(questionIndex, answerLabel) {
         {
           action: 'highlightAnswer',
           questionIndex: questionIndex,
-          answerLabel: answerLabel
+          answerLabel: answerLabel,
+          autoCheck: autoCheck
         },
         (response) => {
           if (response && response.success) {
@@ -343,6 +386,28 @@ function highlightAnswer(questionIndex, answerLabel) {
       );
     });
   });
+}
+
+// Helper function: Rút gọn văn bản dài
+function truncateText(text, maxLength) {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
+
+// Hiển thị câu hỏi đã skip (đã có đáp án)
+function displaySkipped(question) {
+  const resultEl = document.createElement('div');
+  resultEl.className = 'result-item skipped';
+  resultEl.innerHTML = `
+    <div class="question-header">
+      <strong>Câu ${question.questionNumber}:</strong> ${truncateText(question.question, 100)}
+    </div>
+    <div class="answer skipped">
+      <strong>⏭️ Đã bỏ qua:</strong> Câu này đã có đáp án được chọn
+    </div>
+  `;
+  resultsDiv.appendChild(resultEl);
 }
 
 // Hiển thị kết quả trong popup

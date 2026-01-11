@@ -13,7 +13,7 @@ const CONFIG = {
     ],
     API_KEY_PREFIX: 'sk-',
     TEMPERATURE: 0.3,
-    MAX_TOKENS: 500
+    MAX_TOKENS: 50000
   },
 
   // Google Gemini Configuration
@@ -21,16 +21,16 @@ const CONFIG = {
     API_VERSION_V1: 'v1', // Cho gemini-2.5-flash, gemini-1.5-pro
     API_VERSION_V1BETA: 'v1beta', // Cho gemini-flash-latest
     BASE_URL: 'https://generativelanguage.googleapis.com',
-    DEFAULT_MODEL: 'gemini-2.5-flash', // Stable model with good free tier
+    DEFAULT_MODEL: 'gemini-3-flash-preview', // Latest model with best free tier
     MODELS: [
-      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Khuyên dùng)' },
+      { value: 'gemini-3-flash-preview', label: 'Gemini 3.0 Flash Preview (Khuyên dùng - Free nhiều)' },
+      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Ổn định)' },
       { value: 'gemini-flash-latest', label: 'Gemini Flash Latest (Thử nghiệm)' },
-      { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-      { value: 'gemini-pro', label: 'Gemini Pro (Legacy)' }
+      { value: 'gemini-3-pro-preview', label: 'Gemini 3.0 Pro Preview (Mạnh nhất)' }
     ],
     API_KEY_PREFIX: 'AIza',
     TEMPERATURE: 0.3,
-    MAX_OUTPUT_TOKENS: 500
+    MAX_OUTPUT_TOKENS: 5000
   },
 
   // Provider Settings
@@ -42,7 +42,7 @@ const CONFIG = {
 
   // Rate Limiting
   RATE_LIMIT: {
-    MIN_REQUEST_INTERVAL: 5000, // 5 giây giữa mỗi request
+    MIN_REQUEST_INTERVAL: 10000, // 5 giây giữa mỗi request
     REQUEST_TIMEOUT: 30000 // 30 giây timeout
   },
 

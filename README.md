@@ -132,7 +132,7 @@ extension-ehou/
 
 Mở file `config.js`, tìm dòng:
 ```javascript
-MIN_REQUEST_INTERVAL: 5000, // 5 giây
+MIN_REQUEST_INTERVAL: 10000, // 10 giây
 ```
 
 Có thể đổi thành:

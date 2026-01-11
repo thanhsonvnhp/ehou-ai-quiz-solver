@@ -166,6 +166,7 @@
       margin-top: 15px;
     }
 
+    .result-item,
     .question-result {
       background: #f9f9f9;
       border-left: 4px solid #667eea;
@@ -174,12 +175,15 @@
       border-radius: 6px;
     }
 
+    .result-item .question-header,
     .question-result .question-number {
       font-weight: 600;
       color: #667eea;
       margin-bottom: 8px;
+      font-size: 13px;
     }
 
+    .result-item .answer,
     .question-result .answer {
       background: #e8f5e9;
       color: #2e7d32;
@@ -188,6 +192,18 @@
       font-weight: 600;
       display: inline-block;
       margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .result-item .answer.skipped,
+    .question-result .answer.skipped {
+      background: #ffe0b2;
+      color: #e65100;
+    }
+
+    .result-item.skipped {
+      background: #fff3e0;
+      border-left: 4px solid #ff9800;
     }
 
     .question-result .explanation {
@@ -291,16 +307,10 @@
           <label>Model</label>
           <select id="model">
             <optgroup label="OpenAI" id="openaiModels">
-              <option value="gpt-4o-mini">GPT-4O Mini (Khuyên dùng)</option>
-              <option value="gpt-4o">GPT-4O</option>
-              <option value="gpt-4-turbo">GPT-4 Turbo</option>
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+              <!-- Models will be populated from CONFIG -->
             </optgroup>
             <optgroup label="Google Gemini" id="geminiModels" style="display:none;">
-              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng)</option>
-              <option value="gemini-flash-latest">Gemini Flash Latest (Thử nghiệm)</option>
-              <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-              <option value="gemini-pro">Gemini Pro (Legacy)</option>
+              <!-- Models will be populated from CONFIG -->
             </optgroup>
           </select>
         </div>

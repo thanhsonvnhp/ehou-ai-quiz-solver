@@ -1,8 +1,8 @@
 {
   "name": "ehou-ai-quiz-solver",
   "version": "1.0.0",
-  "description": "Chrome Extension hỗ trợ giải đề trắc nghiệm ehou.edu.vn bằng AI",
-  "author": "Your Name",
+  "description": "Trợ lý học tập AI hỗ trợ sinh viên học online hiệu quả hơn trên hệ thống E-Learning.",
+  "author": "Phạm Thanh Sơn",
   "license": "MIT",
   "keywords": [
     "chrome-extension",

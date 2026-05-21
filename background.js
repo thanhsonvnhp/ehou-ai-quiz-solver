@@ -20,13 +20,22 @@ const CONFIG = {
     TEMPERATURE: 0.3,
     MAX_TOKENS: 5000
   },
+  ANTHROPIC: {
+    BASE_URL: 'https://api.anthropic.com/v1/messages',
+    DEFAULT_MODEL: 'claude-haiku-4-6',
+    TEMPERATURE: 0.3,
+    MAX_TOKENS: 5000,
+    API_VERSION: '2023-06-01'
+  },
   MESSAGES: {
     NO_API_KEY: 'Chưa cấu hình API Key. Vui lòng cấu hình trong popup.',
     TIMEOUT_ERROR: 'Timeout: AI không phản hồi trong 30 giây',
     INVALID_RESPONSE: 'AI không trả về kết quả hợp lệ',
     OPENAI_ERROR: 'OpenAI API Error',
+    ANTHROPIC_ERROR: 'Anthropic API Error',
     GEMINI_QUOTA_ERROR: `❌ Lỗi Quota Gemini API:\n\nBạn đã vượt quá giới hạn miễn phí của Gemini API https://aistudio.google.com/usage.\n\n💡 Giải pháp:\n1. Đợi một lúc rồi thử lại (quota reset hàng ngày)\n2. Kiểm tra quota tại: https://aistudio.google.com/usage\n3. Nâng cấp lên gói trả phí tại: https://aistudio.google.com/usage\n4. Hoặc chuyển sang dùng OpenAI (ChatGPT) trong cài đặt`,
-    GEMINI_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://aistudio.google.com/app/apikey\n3. Đảm bảo API Key bắt đầu bằng "AIza..."`
+    GEMINI_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://aistudio.google.com/app/apikey\n3. Đảm bảo API Key bắt đầu bằng "AIza..."`,
+    ANTHROPIC_AUTH_ERROR: `❌ Lỗi xác thực Anthropic API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`
   }
 };
 
@@ -42,6 +51,12 @@ CONFIG.getDefaultSettings = function (provider) {
       model: 'gemini-3-flash-preview', // Latest model with best free tier
       apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models', // Gemini endpoint is built dynamically from model
       provider: 'gemini'
+    };
+  } else if (provider === 'anthropic') {
+    return {
+      model: this.ANTHROPIC.DEFAULT_MODEL,
+      apiEndpoint: this.ANTHROPIC.BASE_URL,
+      provider: 'anthropic'
     };
   } else {
     return {
@@ -178,6 +193,8 @@ async function callAIAPI(settings, prompt) {
           // Chọn API dựa trên provider
           if (settings.provider === 'gemini') {
             result = await callGeminiAPI(settings, prompt, controller);
+          } else if (settings.provider === 'anthropic') {
+            result = await callAnthropicAPI(settings, prompt, controller);
           } else {
             result = await callOpenAIAPI(settings, prompt, controller);
           }
@@ -333,6 +350,82 @@ async function callGeminiAPI(settings, prompt, controller) {
   }
 
   // Validate content trước khi parse
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    console.error('❌ No valid content in response:', data);
+    throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);
+  }
+
+  return parseAIResponse(content);
+}
+
+// Gọi Anthropic Claude API
+async function callAnthropicAPI(settings, prompt, controller) {
+  console.log("callAnthropicAPI", settings, prompt);
+
+  const response = await fetch(settings.apiEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': settings.apiKey,
+      'anthropic-version': CONFIG.ANTHROPIC.API_VERSION
+    },
+    body: JSON.stringify({
+      model: settings.model,
+      max_tokens: CONFIG.ANTHROPIC.MAX_TOKENS,
+      temperature: CONFIG.ANTHROPIC.TEMPERATURE,
+      messages: [
+        {
+          role: 'user',
+          content: `Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Hãy trả lời dưới dạng JSON.\n\n${prompt}`
+        }
+      ]
+    }),
+    signal: controller.signal
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error?.message || '';
+
+    // Xử lý lỗi xác thực
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(`${CONFIG.MESSAGES.ANTHROPIC_AUTH_ERROR}\n\nChi tiết: ${errorMessage}`);
+    }
+
+    // Xử lý lỗi rate limit
+    if (response.status === 429) {
+      await sleep(60_000); // chờ 1 phút
+      throw new Error(`❌ Rate limit exceeded. Vui lòng đợi một chút.\n\nChi tiết: ${errorMessage}`);
+    }
+
+    const error = new Error(errorMessage || `${CONFIG.MESSAGES.ANTHROPIC_ERROR}: ${response.status}`);
+    console.error('❌ Anthropic API Error:', error);
+    throw error;
+  }
+
+  const data = await response.json();
+  console.log('📦 Full Anthropic API response:', JSON.stringify(data, null, 2));
+
+  // Kiểm tra error trong response
+  if (data.error) {
+    console.error('❌ Error in Anthropic response:', data.error);
+    throw new Error(data.error.message || 'Anthropic API returned error in response');
+  }
+
+  // Anthropic trả về content trong content array
+  const content = data.content?.[0]?.text;
+
+  console.log('📝 Extracted content:', content);
+  console.log('📏 Content length:', content?.length || 0);
+
+  const stopReason = data.stop_reason;
+  console.log('🏁 Stop reason:', stopReason);
+
+  if (stopReason && stopReason !== 'end_turn') {
+    console.warn('⚠️ Response may be incomplete. Stop reason:', stopReason);
+  }
+
+  // Validate content
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
     console.error('❌ No valid content in response:', data);
     throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);

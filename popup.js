@@ -45,10 +45,12 @@ function init() {
 function populateModels() {
   const openaiModels = document.getElementById('openaiModels');
   const geminiModels = document.getElementById('geminiModels');
+  const anthropicModels = document.getElementById('anthropicModels');
 
   // Clear existing options
   openaiModels.innerHTML = '';
   geminiModels.innerHTML = '';
+  anthropicModels.innerHTML = '';
 
   // Populate OpenAI models
   CONFIG.OPENAI.MODELS.forEach(model => {
@@ -64,6 +66,14 @@ function populateModels() {
     option.value = model.value;
     option.textContent = model.label;
     geminiModels.appendChild(option);
+  });
+
+  // Populate Anthropic models
+  CONFIG.ANTHROPIC.MODELS.forEach(model => {
+    const option = document.createElement('option');
+    option.value = model.value;
+    option.textContent = model.label;
+    anthropicModels.appendChild(option);
   });
 }
 
@@ -98,9 +108,13 @@ function handleSaveSettings() {
     defaultEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models';
   }
 
+  if (provider === 'anthropic') {
+    defaultEndpoint = apiEndpointInput.value.trim() || 'https://api.anthropic.com/v1/messages';
+  }
+
   const settings = {
     apiKey: apiKeyInput.value.trim(),
-    apiEndpoint: defaultEndpoint,// provider === 'gemini' ? '' : (apiEndpointInput.value.trim() || defaultEndpoint),
+    apiEndpoint: defaultEndpoint,
     model: modelSelect.value,
     provider: provider
   };
@@ -474,36 +488,34 @@ function handleProviderChange() {
   const provider = providerSelect.value;
   const openaiModels = document.getElementById('openaiModels');
   const geminiModels = document.getElementById('geminiModels');
+  const anthropicModels = document.getElementById('anthropicModels');
+
+  // Hide all model groups first
+  openaiModels.style.display = 'none';
+  geminiModels.style.display = 'none';
+  anthropicModels.style.display = 'none';
 
   if (provider === 'gemini') {
-    // Show Gemini models, hide OpenAI models
-    openaiModels.style.display = 'none';
     geminiModels.style.display = 'block';
     modelSelect.value = CONFIG.GEMINI.DEFAULT_MODEL;
-
-    // Hide endpoint for Gemini (not needed)
     endpointGroup.style.display = 'none';
-
-    // Clear endpoint input for Gemini
     apiEndpointInput.value = '';
-
-    // Update placeholder
     apiKeyInput.placeholder = 'AIza...';
-  } else {
-    // Show OpenAI models, hide Gemini models
-    openaiModels.style.display = 'block';
-    geminiModels.style.display = 'none';
-    modelSelect.value = CONFIG.OPENAI.DEFAULT_MODEL;
-
-    // Show endpoint for OpenAI
+  } else if (provider === 'anthropic') {
+    anthropicModels.style.display = 'block';
+    modelSelect.value = CONFIG.ANTHROPIC.DEFAULT_MODEL;
     endpointGroup.style.display = 'block';
-
-    // Set default OpenAI endpoint if empty
+    if (!apiEndpointInput.value) {
+      apiEndpointInput.value = CONFIG.ANTHROPIC.BASE_URL;
+    }
+    apiKeyInput.placeholder = 'sk-ant-...';
+  } else {
+    openaiModels.style.display = 'block';
+    modelSelect.value = CONFIG.OPENAI.DEFAULT_MODEL;
+    endpointGroup.style.display = 'block';
     if (!apiEndpointInput.value) {
       apiEndpointInput.value = CONFIG.OPENAI.DEFAULT_ENDPOINT;
     }
-
-    // Update placeholder
     apiKeyInput.placeholder = 'sk-proj-...';
   }
 }

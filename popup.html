@@ -280,8 +280,8 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>🤖 AI Quiz Solver</h1>
-      <p>Giải đề trắc nghiệm Ehou bằng AI</p>
+      <h1>🤖 Trợ Lý Học Tập E-Learning AI cho EHOU</h1>
+      <p>Trợ lý học tập AI - hỗ trợ học online hiệu quả hơn.</p>
     </div>
     <div class="main-content">
       <div id="settingsSection" class="section hidden">
@@ -291,13 +291,13 @@
           <select id="provider">
             <option value="openai">OpenAI (ChatGPT)</option>
             <option value="gemini">Google Gemini</option>
+            <option value="anthropic">Anthropic (Claude)</option>
           </select>
         </div>
         <div class="input-group">
           <label>API Key *</label>
           <input type="password" id="apiKey" placeholder="Nhập API Key của bạn">
-          <small style="font-size: 11px; color: #999; margin-top: 5px; display: block;">OpenAI: sk-proj-... | Gemini:
-            AIza...</small>
+          <small style="font-size: 11px; color: #999; margin-top: 5px; display: block;">OpenAI: sk-proj-... | Gemini: AIza... | Anthropic: sk-ant-...</small>
         </div>
         <div class="input-group" id="endpointGroup">
           <label>API Endpoint (Optional)</label>
@@ -310,6 +310,9 @@
               <!-- Models will be populated from CONFIG -->
             </optgroup>
             <optgroup label="Google Gemini" id="geminiModels" style="display:none;">
+              <!-- Models will be populated from CONFIG -->
+            </optgroup>
+            <optgroup label="Anthropic Claude" id="anthropicModels" style="display:none;">
               <!-- Models will be populated from CONFIG -->
             </optgroup>
           </select>

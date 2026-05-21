@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chính Sách Quyền Riêng Tư – Trợ Lý Học Tập AI cho EHOU</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f5f7fa;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+    header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+    header p  { font-size: 0.95rem; opacity: 0.85; }
+
+    main {
+      max-width: 820px;
+      margin: 40px auto 60px;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.07);
+      padding: 36px 40px;
+      margin-bottom: 28px;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #5a4fcf;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 .icon { font-size: 1.3rem; }
+
+    p  { margin-bottom: 12px; color: #333; }
+    ul { padding-left: 22px; margin-bottom: 12px; }
+    li { margin-bottom: 6px; color: #333; }
+
+    .highlight {
+      background: #f0edff;
+      border-left: 4px solid #667eea;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.95rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 0.93rem;
+    }
+    th {
+      background: #667eea;
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: #fafafa; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .badge-green  { background: #d4f7e7; color: #1a7a4a; }
+    .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+    .badge-orange { background: #fef3c7; color: #92400e; }
+
+    footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #888;
+      padding: 24px;
+    }
+    footer a { color: #667eea; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🔐 Chính Sách Quyền Riêng Tư</h1>
+  <p>Trợ Lý Học Tập AI cho EHOU &nbsp;·&nbsp; Phiên bản 1.0.0 &nbsp;·&nbsp; Cập nhật: 21/05/2026</p>
+</header>
+
+<main>
+
+  <!-- 1. Giới thiệu -->
+  <div class="card">
+    <h2><span class="icon">📋</span>1. Giới Thiệu</h2>
+    <p>
+      <strong>Trợ Lý Học Tập AI cho EHOU</strong> ("Extension") là tiện ích mở rộng Chrome
+      hỗ trợ sinh viên học tập trực tuyến trên hệ thống <em>learning.ehou.edu.vn</em>.
+      Extension sử dụng các mô hình AI (Google Gemini, OpenAI) để phân tích câu hỏi trắc nghiệm
+      và cung cấp gợi ý học tập.
+    </p>
+    <p>
+      Chính sách này mô tả rõ ràng những dữ liệu nào được xử lý, mục đích xử lý, và cách
+      chúng tôi bảo vệ quyền riêng tư của bạn.
+    </p>
+    <div class="highlight">
+      Extension <strong>không thu thập, không lưu trữ, và không truyền</strong> bất kỳ dữ liệu
+      cá nhân nào lên server của chúng tôi. Mọi xử lý đều diễn ra cục bộ trên thiết bị của bạn
+      hoặc trực tiếp với nhà cung cấp AI mà bạn chọn.
+    </div>
+  </div>
+
+  <!-- 2. Dữ liệu thu thập -->
+  <div class="card">
+    <h2><span class="icon">📊</span>2. Dữ Liệu Được Xử Lý</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Loại dữ liệu</th>
+          <th>Mục đích</th>
+          <th>Lưu trữ</th>
+          <th>Chia sẻ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>API Key</strong> (Gemini / OpenAI)</td>
+          <td>Xác thực với nhà cung cấp AI</td>
+          <td><span class="badge badge-blue">Chrome Storage (local)</span></td>
+          <td>Chỉ gửi đến nhà cung cấp AI tương ứng</td>
+        </tr>
+        <tr>
+          <td><strong>Nội dung câu hỏi</strong> trên trang EHOU</td>
+          <td>Gửi cho AI phân tích và gợi ý đáp án</td>
+          <td><span class="badge badge-green">Không lưu</span></td>
+          <td>Gửi đến API Gemini hoặc OpenAI theo yêu cầu</td>
+        </tr>
+        <tr>
+          <td><strong>Cài đặt người dùng</strong> (provider, model, endpoint)</td>
+          <td>Ghi nhớ tùy chọn giữa các phiên</td>
+          <td><span class="badge badge-blue">Chrome Storage (sync)</span></td>
+          <td>Không chia sẻ</td>
+        </tr>
+        <tr>
+          <td><strong>Kết quả phân tích AI</strong></td>
+          <td>Hiển thị gợi ý trong popup</td>
+          <td><span class="badge badge-green">Bộ nhớ tạm (session)</span></td>
+          <td>Không chia sẻ</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="highlight" style="margin-top:18px;">
+      Extension <strong>không</strong> đọc thông tin đăng nhập, mật khẩu, điểm số, hay bất kỳ
+      dữ liệu cá nhân nào ngoài nội dung câu hỏi hiển thị trên trang.
+    </div>
+  </div>
+
+  <!-- 3. Quyền truy cập -->
+  <div class="card">
+    <h2><span class="icon">🔑</span>3. Quyền Truy Cập (Permissions)</h2>
+    <p>Extension yêu cầu các quyền sau và lý do cụ thể:</p>
+    <ul>
+      <li>
+        <strong>activeTab</strong> – Đọc nội dung câu hỏi trên tab đang mở tại
+        <em>learning.ehou.edu.vn</em>. Chỉ kích hoạt khi người dùng nhấn nút phân tích.
+      </li>
+      <li>
+        <strong>storage</strong> – Lưu API key và cài đặt người dùng vào Chrome Storage
+        trên thiết bị cục bộ.
+      </li>
+      <li>
+        <strong>scripting</strong> – Chèn script để đánh dấu (highlight) đáp án được AI
+        gợi ý trực tiếp trên trang web.
+      </li>
+      <li>
+        <strong>host_permissions: learning.ehou.edu.vn</strong> – Giới hạn hoạt động của
+        content script chỉ trên trang học tập EHOU.
+      </li>
+      <li>
+        <strong>host_permissions: api.openai.com, https://*/*</strong> – Cho phép gọi API
+        đến nhà cung cấp AI (Gemini, OpenAI, hoặc endpoint tùy chỉnh do người dùng cấu hình).
+      </li>
+    </ul>
+  </div>
+
+  <!-- 4. Truyền dữ liệu đến bên thứ ba -->
+  <div class="card">
+    <h2><span class="icon">🌐</span>4. Truyền Dữ Liệu Đến Bên Thứ Ba</h2>
+    <p>
+      Khi bạn nhấn <strong>"Phân tích bằng AI"</strong>, nội dung câu hỏi được gửi trực tiếp
+      từ trình duyệt của bạn đến nhà cung cấp AI mà bạn đã chọn:
+    </p>
+    <ul>
+      <li>
+        <strong>Google Gemini API</strong> – Chính sách bảo mật:
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>
+      </li>
+      <li>
+        <strong>OpenAI API</strong> – Chính sách bảo mật:
+        <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">openai.com/policies/privacy-policy</a>
+      </li>
+    </ul>
+    <p>
+      Chúng tôi không kiểm soát cách các nhà cung cấp này xử lý dữ liệu. Vui lòng đọc
+      chính sách của họ trước khi sử dụng.
+    </p>
+    <div class="highlight">
+      Extension <strong>không có server riêng</strong>. Không có dữ liệu nào được gửi đến
+      bất kỳ server nào của nhà phát triển Extension.
+    </div>
+  </div>
+
+  <!-- 5. Lưu trữ dữ liệu -->
+  <div class="card">
+    <h2><span class="icon">💾</span>5. Lưu Trữ & Bảo Mật Dữ Liệu</h2>
+    <ul>
+      <li>
+        API key được lưu trong <strong>Chrome Storage API</strong> – được mã hóa bởi trình
+        duyệt và chỉ truy cập được bởi Extension này.
+      </li>
+      <li>
+        Dữ liệu không được ghi vào file hệ thống hay cơ sở dữ liệu bên ngoài.
+      </li>
+      <li>
+        Kết quả phân tích AI chỉ tồn tại trong bộ nhớ tạm của phiên làm việc và bị xóa
+        khi bạn đóng popup hoặc nhấn "Xóa kết quả".
+      </li>
+      <li>
+        Bạn có thể xóa toàn bộ dữ liệu đã lưu bất kỳ lúc nào bằng cách gỡ cài đặt Extension
+        hoặc xóa dữ liệu tại <code>chrome://extensions</code>.
+      </li>
+    </ul>
+  </div>
+
+  <!-- 6. Quyền của người dùng -->
+  <div class="card">
+    <h2><span class="icon">👤</span>6. Quyền Của Người Dùng</h2>
+    <p>Bạn có toàn quyền kiểm soát dữ liệu của mình:</p>
+    <ul>
+      <li><strong>Truy cập</strong> – Xem API key và cài đặt đã lưu trong popup Extension.</li>
+      <li><strong>Chỉnh sửa</strong> – Cập nhật hoặc thay đổi API key và cài đặt bất kỳ lúc nào.</li>
+      <li><strong>Xóa</strong> – Gỡ cài đặt Extension để xóa toàn bộ dữ liệu đã lưu.</li>
+      <li><strong>Từ chối</strong> – Không sử dụng tính năng AI; Extension sẽ không gửi bất kỳ dữ liệu nào.</li>
+    </ul>
+  </div>
+
+  <!-- 7. Đối tượng sử dụng -->
+  <div class="card">
+    <h2><span class="icon">🎓</span>7. Đối Tượng Sử Dụng</h2>
+    <p>
+      Extension được thiết kế dành cho <strong>sinh viên từ 18 tuổi trở lên</strong> đang
+      học tập tại Trường Đại học Mở Hà Nội (EHOU). Extension không hướng đến trẻ em dưới 13 tuổi
+      và không thu thập dữ liệu từ đối tượng này.
+    </p>
+  </div>
+
+  <!-- 8. Thay đổi chính sách -->
+  <div class="card">
+    <h2><span class="icon">🔄</span>8. Thay Đổi Chính Sách</h2>
+    <p>
+      Chúng tôi có thể cập nhật chính sách này khi Extension có tính năng mới. Phiên bản mới
+      nhất luôn được đăng tại trang này. Ngày cập nhật được ghi rõ ở đầu trang.
+    </p>
+    <p>
+      Việc tiếp tục sử dụng Extension sau khi chính sách được cập nhật đồng nghĩa với việc
+      bạn chấp nhận các thay đổi đó.
+    </p>
+  </div>
+
+  <!-- 9. Liên hệ -->
+  <div class="card">
+    <h2><span class="icon">📬</span>9. Liên Hệ</h2>
+    <p>Nếu bạn có câu hỏi về chính sách quyền riêng tư, vui lòng liên hệ:</p>
+    <ul>
+      <li><strong>Nhà phát triển:</strong> Phạm Thanh Sơn</li>
+      <li><strong>GitHub:</strong> <a href="https://github.com/sonpt179hp" target="_blank" rel="noopener">github.com/sonpt179hp</a></li>
+    </ul>
+  </div>
+
+</main>
+
+<footer>
+  <p>© 2026 Trợ Lý Học Tập AI cho EHOU &nbsp;·&nbsp; Phát triển bởi Phạm Thanh Sơn</p>
+  <p style="margin-top:6px;">Chính sách này áp dụng cho Extension phiên bản 1.0.0 trở lên.</p>
+</footer>
+
+</body>
+</html>

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Ehou AI Quiz Solver",
+  "name": "Trợ Lý Học Tập E-Learning AI cho EHOU",
   "version": "1.0.0",
-  "description": "Hỗ trợ giải đề trắc nghiệm trên ehou.edu.vn bằng AI",
+  "description": "Trợ lý học tập AI hỗ trợ sinh viên học online hiệu quả hơn trên hệ thống E-Learning.",
   "permissions": [
     "activeTab",
     "storage",

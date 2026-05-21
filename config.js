@@ -33,10 +33,26 @@ const CONFIG = {
     MAX_OUTPUT_TOKENS: 5000
   },
 
+  // Anthropic Claude Configuration
+  ANTHROPIC: {
+    BASE_URL: 'https://api.anthropic.com/v1/messages',
+    DEFAULT_MODEL: 'claude-haiku-4-6',
+    MODELS: [
+      { value: 'claude-haiku-4-6', label: 'Claude Haiku 4.6 (Khuyên dùng - Nhanh & Rẻ)' },
+      { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (Cân bằng)' },
+      { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (Mạnh nhất)' }
+    ],
+    API_KEY_PREFIX: 'sk-ant-',
+    TEMPERATURE: 0.3,
+    MAX_TOKENS: 5000,
+    API_VERSION: '2023-06-01'
+  },
+
   // Provider Settings
   PROVIDERS: {
     OPENAI: 'openai',
-    GEMINI: 'gemini'
+    GEMINI: 'gemini',
+    ANTHROPIC: 'anthropic'
   },
   DEFAULT_PROVIDER: 'gemini',
 
@@ -61,14 +77,20 @@ const CONFIG = {
     // Gemini errors
     GEMINI_QUOTA_ERROR: `❌ Lỗi Quota Gemini API:\n\nBạn đã vượt quá giới hạn miễn phí của Gemini API.\n\n💡 Giải pháp:\n1. Đợi một lúc rồi thử lại (quota reset hàng ngày)\n2. Kiểm tra quota tại: https://ai.dev/rate-limit\n3. Nâng cấp lên gói trả phí tại: https://aistudio.google.com/\n4. Hoặc chuyển sang dùng OpenAI (ChatGPT) trong cài đặt`,
 
-    GEMINI_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://aistudio.google.com/app/apikey\n3. Đảm bảo API Key bắt đầu bằng "AIza..."`
+    GEMINI_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://aistudio.google.com/app/apikey\n3. Đảm bảo API Key bắt đầu bằng "AIza..."`,
+
+    // Anthropic errors
+    ANTHROPIC_ERROR: 'Anthropic API Error',
+    ANTHROPIC_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`
   },
 
   // API Links
   LINKS: {
     OPENAI_API_KEY: 'https://platform.openai.com/api-keys',
     GEMINI_API_KEY: 'https://aistudio.google.com/app/apikey',
-    GEMINI_QUOTA: 'https://ai.dev/rate-limit'
+    GEMINI_QUOTA: 'https://ai.dev/rate-limit',
+    ANTHROPIC_API_KEY: 'https://console.anthropic.com/',
+    ANTHROPIC_DOCS: 'https://docs.anthropic.com/'
   }
 };
 
@@ -86,6 +108,12 @@ CONFIG.getDefaultSettings = function (provider) {
       model: this.GEMINI.DEFAULT_MODEL,
       apiEndpoint: '', // Gemini doesn't need custom endpoint
       provider: this.PROVIDERS.GEMINI
+    };
+  } else if (provider === this.PROVIDERS.ANTHROPIC) {
+    return {
+      model: this.ANTHROPIC.DEFAULT_MODEL,
+      apiEndpoint: this.ANTHROPIC.BASE_URL,
+      provider: this.PROVIDERS.ANTHROPIC
     };
   } else {
     return {

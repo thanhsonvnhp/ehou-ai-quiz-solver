@@ -104,11 +104,6 @@
 </head>
 <body>
 
-<header>
-  <h1>🔐 Chính Sách Quyền Riêng Tư</h1>
-  <p>Trợ Lý Học Tập AI cho EHOU &nbsp;·&nbsp; Phiên bản 1.0.0 &nbsp;·&nbsp; Cập nhật: 21/05/2026</p>
-</header>
-
 <main>
 
   <!-- 1. Giới thiệu -->
@@ -184,24 +179,24 @@
     <p>Extension yêu cầu các quyền sau và lý do cụ thể:</p>
     <ul>
       <li>
-        <strong>activeTab</strong> – Đọc nội dung câu hỏi trên tab đang mở tại
-        <em>learning.ehou.edu.vn</em>. Chỉ kích hoạt khi người dùng nhấn nút phân tích.
+        <strong>activeTab</strong> – Truy cập nội dung tab hiện tại tại
+        <em>learning.ehou.edu.vn</em> khi người dùng nhấn nút phân tích.
       </li>
       <li>
         <strong>storage</strong> – Lưu API key và cài đặt người dùng vào Chrome Storage
         trên thiết bị cục bộ.
       </li>
       <li>
-        <strong>scripting</strong> – Chèn script để đánh dấu (highlight) đáp án được AI
-        gợi ý trực tiếp trên trang web.
+        <strong>tabs</strong> – Truy vấn tab đang hoạt động để gửi tin nhắn đến content
+        script và kiểm tra URL trang hiện tại.
       </li>
       <li>
         <strong>host_permissions: learning.ehou.edu.vn</strong> – Giới hạn hoạt động của
         content script chỉ trên trang học tập EHOU.
       </li>
       <li>
-        <strong>host_permissions: api.openai.com, https://*/*</strong> – Cho phép gọi API
-        đến nhà cung cấp AI (Gemini, OpenAI, hoặc endpoint tùy chỉnh do người dùng cấu hình).
+        <strong>host_permissions: api.openai.com, generativelanguage.googleapis.com, api.anthropic.com</strong>
+        – Cho phép gọi API đến các nhà cung cấp AI được hỗ trợ (OpenAI, Google Gemini, Anthropic Claude).
       </li>
     </ul>
   </div>

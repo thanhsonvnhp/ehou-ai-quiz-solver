@@ -1,17 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "Trợ Lý Học Tập E-Learning AI cho EHOU",
+  "name": "Trợ Lý Học Tập E-Learning AI",
   "version": "1.0.0",
   "description": "Trợ lý học tập AI hỗ trợ sinh viên học online hiệu quả hơn trên hệ thống E-Learning.",
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "tabs"
   ],
   "host_permissions": [
     "https://learning.ehou.edu.vn/*",
     "https://api.openai.com/*",
-    "https://*/*"
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.anthropic.com/*"
   ],
   "background": {
     "service_worker": "background.js",

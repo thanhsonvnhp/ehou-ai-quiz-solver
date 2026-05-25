@@ -18,15 +18,15 @@ const CONFIG = {
 
   // Google Gemini Configuration
   GEMINI: {
-    API_VERSION_V1: 'v1', // Cho gemini-2.5-flash, gemini-1.5-pro
-    API_VERSION_V1BETA: 'v1beta', // Cho gemini-flash-latest
+    API_VERSION_V1: 'v1',
+    API_VERSION_V1BETA: 'v1beta',
     BASE_URL: 'https://generativelanguage.googleapis.com',
-    DEFAULT_MODEL: 'gemini-3-flash-preview', // Latest model with best free tier
+    DEFAULT_MODEL: 'gemini-3.5-flash',
     MODELS: [
-      { value: 'gemini-3-flash-preview', label: 'Gemini 3.0 Flash Preview (Khuyên dùng - Free nhiều)' },
-      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Ổn định)' },
-      { value: 'gemini-flash-latest', label: 'Gemini Flash Latest (Thử nghiệm)' },
-      { value: 'gemini-3-pro-preview', label: 'Gemini 3.0 Pro Preview (Mạnh nhất)' }
+      { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash (Khuyên dùng - Mới nhất, Free)' },
+      { value: 'gemini-3.1-flash', label: 'Gemini 3.1 Flash (Ổn định)' },
+      { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite (Nhanh & Rẻ nhất)' },
+      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Cũ - deprecated 17/6/2026)' }
     ],
     API_KEY_PREFIX: 'AIza',
     TEMPERATURE: 0.3,
@@ -36,9 +36,9 @@ const CONFIG = {
   // Anthropic Claude Configuration
   ANTHROPIC: {
     BASE_URL: 'https://api.anthropic.com/v1/messages',
-    DEFAULT_MODEL: 'claude-haiku-4-6',
+    DEFAULT_MODEL: 'claude-haiku-4-5-20251001',
     MODELS: [
-      { value: 'claude-haiku-4-6', label: 'Claude Haiku 4.6 (Khuyên dùng - Nhanh & Rẻ)' },
+      { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (Khuyên dùng - Nhanh & Rẻ)' },
       { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (Cân bằng)' },
       { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (Mạnh nhất)' }
     ],

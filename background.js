@@ -22,7 +22,7 @@ const CONFIG = {
   },
   ANTHROPIC: {
     BASE_URL: 'https://api.anthropic.com/v1/messages',
-    DEFAULT_MODEL: 'claude-haiku-4-6',
+    DEFAULT_MODEL: 'claude-haiku-4-5-20251001',
     TEMPERATURE: 0.3,
     MAX_TOKENS: 5000,
     API_VERSION: '2023-06-01'
@@ -48,7 +48,7 @@ CONFIG.getGeminiEndpoint = function (model) {
 CONFIG.getDefaultSettings = function (provider) {
   if (provider === 'gemini') {
     return {
-      model: 'gemini-3-flash-preview', // Latest model with best free tier
+      model: 'gemini-3.5-flash',
       apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models', // Gemini endpoint is built dynamically from model
       provider: 'gemini'
     };

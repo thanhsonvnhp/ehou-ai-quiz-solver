@@ -27,15 +27,23 @@ const CONFIG = {
     MAX_TOKENS: 5000,
     API_VERSION: '2023-06-01'
   },
+  DEEPSEEK: {
+    DEFAULT_ENDPOINT: 'https://api.deepseek.com/chat/completions',
+    DEFAULT_MODEL: 'deepseek-v4-flash',
+    TEMPERATURE: 0.3,
+    MAX_TOKENS: 5000
+  },
   MESSAGES: {
     NO_API_KEY: 'Chưa cấu hình API Key. Vui lòng cấu hình trong popup.',
     TIMEOUT_ERROR: 'Timeout: AI không phản hồi trong 30 giây',
     INVALID_RESPONSE: 'AI không trả về kết quả hợp lệ',
     OPENAI_ERROR: 'OpenAI API Error',
     ANTHROPIC_ERROR: 'Anthropic API Error',
+    DEEPSEEK_ERROR: 'DeepSeek API Error',
     GEMINI_QUOTA_ERROR: `❌ Lỗi Quota Gemini API:\n\nBạn đã vượt quá giới hạn miễn phí của Gemini API https://aistudio.google.com/usage.\n\n💡 Giải pháp:\n1. Đợi một lúc rồi thử lại (quota reset hàng ngày)\n2. Kiểm tra quota tại: https://aistudio.google.com/usage\n3. Nâng cấp lên gói trả phí tại: https://aistudio.google.com/usage\n4. Hoặc chuyển sang dùng OpenAI (ChatGPT) trong cài đặt`,
     GEMINI_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://aistudio.google.com/app/apikey\n3. Đảm bảo API Key bắt đầu bằng "AIza..."`,
-    ANTHROPIC_AUTH_ERROR: `❌ Lỗi xác thực Anthropic API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`
+    ANTHROPIC_AUTH_ERROR: `❌ Lỗi xác thực Anthropic API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`,
+    DEEPSEEK_AUTH_ERROR: `❌ Lỗi xác thực DeepSeek API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://platform.deepseek.com/api_keys\n3. Đảm bảo API Key bắt đầu bằng "sk-..."`
   }
 };
 
@@ -49,7 +57,7 @@ CONFIG.getDefaultSettings = function (provider) {
   if (provider === 'gemini') {
     return {
       model: 'gemini-3.5-flash',
-      apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models', // Gemini endpoint is built dynamically from model
+      apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
       provider: 'gemini'
     };
   } else if (provider === 'anthropic') {
@@ -57,6 +65,12 @@ CONFIG.getDefaultSettings = function (provider) {
       model: this.ANTHROPIC.DEFAULT_MODEL,
       apiEndpoint: this.ANTHROPIC.BASE_URL,
       provider: 'anthropic'
+    };
+  } else if (provider === 'deepseek') {
+    return {
+      model: this.DEEPSEEK.DEFAULT_MODEL,
+      apiEndpoint: this.DEEPSEEK.DEFAULT_ENDPOINT,
+      provider: 'deepseek'
     };
   } else {
     return {
@@ -195,6 +209,8 @@ async function callAIAPI(settings, prompt) {
             result = await callGeminiAPI(settings, prompt, controller);
           } else if (settings.provider === 'anthropic') {
             result = await callAnthropicAPI(settings, prompt, controller);
+          } else if (settings.provider === 'deepseek') {
+            result = await callDeepSeekAPI(settings, prompt, controller);
           } else {
             result = await callOpenAIAPI(settings, prompt, controller);
           }
@@ -426,6 +442,86 @@ async function callAnthropicAPI(settings, prompt, controller) {
   }
 
   // Validate content
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    console.error('❌ No valid content in response:', data);
+    throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);
+  }
+
+  return parseAIResponse(content);
+}
+
+// Gọi DeepSeek API
+async function callDeepSeekAPI(settings, prompt, controller) {
+  console.log("callDeepSeekAPI", settings, prompt);
+
+  const requestBody = {
+    model: settings.model,
+    messages: [
+      {
+        role: 'system',
+        content: 'Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Nhiệm vụ của bạn là trả về kết quả dưới dạng JSON hợp lệ.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    temperature: CONFIG.DEEPSEEK.TEMPERATURE,
+    max_tokens: CONFIG.DEEPSEEK.MAX_TOKENS,
+    stream: false
+  };
+
+  if (settings.model === 'deepseek-v4-pro' || settings.model === 'deepseek-reasoner') {
+    requestBody.reasoning_effort = 'high';
+    requestBody.thinking = { type: 'enabled' };
+  } else {
+    requestBody.response_format = { type: "json_object" };
+  }
+
+  const response = await fetch(settings.apiEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${settings.apiKey}`
+    },
+    body: JSON.stringify(requestBody),
+    signal: controller.signal
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error?.message || '';
+
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(`${CONFIG.MESSAGES.DEEPSEEK_AUTH_ERROR}\n\nChi tiết: ${errorMessage}`);
+    }
+
+    if (response.status === 429) {
+      await sleep(60_000);
+      throw new Error(`❌ Rate limit DeepSeek exceeded. Vui lòng đợi một chút.\n\nChi tiết: ${errorMessage}`);
+    }
+
+    const error = new Error(errorMessage || `${CONFIG.MESSAGES.DEEPSEEK_ERROR}: ${response.status}`);
+    console.error('❌ DeepSeek API Error:', error);
+    throw error;
+  }
+
+  const data = await response.json();
+  console.log('📦 Full DeepSeek API response:', JSON.stringify(data, null, 2));
+
+  if (data.error) {
+    console.error('❌ Error in DeepSeek response:', data.error);
+    throw new Error(data.error.message || 'DeepSeek API returned error in response');
+  }
+
+  const content = data.choices?.[0]?.message?.content;
+
+  console.log('📝 Extracted content:', content);
+  console.log('📏 Content length:', content?.length || 0);
+
+  const finishReason = data.choices?.[0]?.finish_reason;
+  console.log('🏁 Finish reason:', finishReason);
+
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
     console.error('❌ No valid content in response:', data);
     throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);

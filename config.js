@@ -48,11 +48,27 @@ const CONFIG = {
     API_VERSION: '2023-06-01'
   },
 
+  // DeepSeek Configuration
+  DEEPSEEK: {
+    DEFAULT_ENDPOINT: 'https://api.deepseek.com/chat/completions',
+    DEFAULT_MODEL: 'deepseek-v4-flash',
+    MODELS: [
+      { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash (Khuyên dùng - Nhanh & Rẻ)' },
+      { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro (Mạnh nhất)' },
+      { value: 'deepseek-chat', label: 'DeepSeek Chat (Deprecated 24/7/2026)' },
+      { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (Deprecated 24/7/2026)' }
+    ],
+    API_KEY_PREFIX: 'sk-',
+    TEMPERATURE: 0.3,
+    MAX_TOKENS: 5000
+  },
+
   // Provider Settings
   PROVIDERS: {
     OPENAI: 'openai',
     GEMINI: 'gemini',
-    ANTHROPIC: 'anthropic'
+    ANTHROPIC: 'anthropic',
+    DEEPSEEK: 'deepseek'
   },
   DEFAULT_PROVIDER: 'gemini',
 
@@ -81,7 +97,11 @@ const CONFIG = {
 
     // Anthropic errors
     ANTHROPIC_ERROR: 'Anthropic API Error',
-    ANTHROPIC_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`
+    ANTHROPIC_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`,
+
+    // DeepSeek errors
+    DEEPSEEK_ERROR: 'DeepSeek API Error',
+    DEEPSEEK_AUTH_ERROR: `❌ Lỗi xác thực DeepSeek API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://platform.deepseek.com/api_keys\n3. Đảm bảo API Key bắt đầu bằng "sk-..."`
   },
 
   // API Links
@@ -90,7 +110,9 @@ const CONFIG = {
     GEMINI_API_KEY: 'https://aistudio.google.com/app/apikey',
     GEMINI_QUOTA: 'https://ai.dev/rate-limit',
     ANTHROPIC_API_KEY: 'https://console.anthropic.com/',
-    ANTHROPIC_DOCS: 'https://docs.anthropic.com/'
+    ANTHROPIC_DOCS: 'https://docs.anthropic.com/',
+    DEEPSEEK_API_KEY: 'https://platform.deepseek.com/api_keys',
+    DEEPSEEK_DOCS: 'https://platform.deepseek.com/docs'
   }
 };
 
@@ -114,6 +136,12 @@ CONFIG.getDefaultSettings = function (provider) {
       model: this.ANTHROPIC.DEFAULT_MODEL,
       apiEndpoint: this.ANTHROPIC.BASE_URL,
       provider: this.PROVIDERS.ANTHROPIC
+    };
+  } else if (provider === this.PROVIDERS.DEEPSEEK) {
+    return {
+      model: this.DEEPSEEK.DEFAULT_MODEL,
+      apiEndpoint: this.DEEPSEEK.DEFAULT_ENDPOINT,
+      provider: this.PROVIDERS.DEEPSEEK
     };
   } else {
     return {

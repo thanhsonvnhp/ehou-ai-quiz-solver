@@ -174,48 +174,56 @@ function createWidget() {
 
   widget = document.createElement('div');
   widget.id = 'ai-quiz-widget';
+  widget.className = 'collapsed';
   widget.innerHTML = `
-    <div class="ai-widget-header" id="ai-widget-header">
-      <div class="ai-widget-title">
-        <span>🤖</span>
-        <span class="ai-widget-title-text">AI Quiz Solver</span>
-      </div>
-      <div class="ai-widget-controls">
-        <button class="ai-widget-btn" id="ai-widget-minimize" title="Thu gọn">−</button>
-      </div>
+    <div class="ai-widget-collapsed-view" id="ai-widget-collapsed">
+      <div class="ai-widget-icon">🤖</div>
+      <div class="ai-widget-greeting">Tôi là trợ lý AI<br>hãy để tôi giúp bạn</div>
     </div>
-    <div class="ai-widget-body">
-      <div class="ai-widget-settings">
-        <div class="ai-widget-settings-row">
-          <span class="ai-widget-settings-label">Provider:</span>
-          <span class="ai-widget-settings-value" id="ai-widget-provider">-</span>
+    <div class="ai-widget-expanded-view" style="display:none;">
+      <div class="ai-widget-header" id="ai-widget-header">
+        <div class="ai-widget-title">
+          <span>🤖</span>
+          <span class="ai-widget-title-text">Trợ Lý Học Tập HOU E-Learning AI</span>
         </div>
-        <div class="ai-widget-settings-row">
-          <span class="ai-widget-settings-label">Model:</span>
-          <span class="ai-widget-settings-value" id="ai-widget-model">-</span>
-        </div>
-      </div>
-      <div class="ai-widget-stats" id="ai-widget-stats" style="display:none;">
-        <div class="ai-widget-stat">
-          <div class="ai-widget-stat-value" id="ai-widget-total">0</div>
-          <div class="ai-widget-stat-label">Câu hỏi</div>
-        </div>
-        <div class="ai-widget-stat">
-          <div class="ai-widget-stat-value" id="ai-widget-solved">0</div>
-          <div class="ai-widget-stat-label">Đã giải</div>
+        <div class="ai-widget-controls">
+          <button class="ai-widget-btn" id="ai-widget-close" title="Đóng">×</button>
         </div>
       </div>
-      <div class="ai-widget-status info" id="ai-widget-status">Sẵn sàng giải đề</div>
-      <div class="ai-widget-results" id="ai-widget-results"></div>
-      <div class="ai-widget-actions">
-        <button class="ai-widget-action-btn primary" id="ai-widget-solve">🚀 Giải bằng AI</button>
-        <button class="ai-widget-action-btn danger" id="ai-widget-stop" style="display:none;">⛔ Dừng lại</button>
-        <button class="ai-widget-action-btn secondary" id="ai-widget-clear">🗑️ Xóa kết quả</button>
+      <div class="ai-widget-body">
+        <div class="ai-widget-settings">
+          <div class="ai-widget-settings-row">
+            <span class="ai-widget-settings-label">Provider:</span>
+            <span class="ai-widget-settings-value" id="ai-widget-provider">-</span>
+          </div>
+          <div class="ai-widget-settings-row">
+            <span class="ai-widget-settings-label">Model:</span>
+            <span class="ai-widget-settings-value" id="ai-widget-model">-</span>
+          </div>
+        </div>
+        <div class="ai-widget-stats" id="ai-widget-stats" style="display:none;">
+          <div class="ai-widget-stat">
+            <div class="ai-widget-stat-value" id="ai-widget-total">0</div>
+            <div class="ai-widget-stat-label">Câu hỏi</div>
+          </div>
+          <div class="ai-widget-stat">
+            <div class="ai-widget-stat-value" id="ai-widget-solved">0</div>
+            <div class="ai-widget-stat-label">Đã giải</div>
+          </div>
+        </div>
+        <div class="ai-widget-status info" id="ai-widget-status">Sẵn sàng giải đề</div>
+        <div class="ai-widget-results" id="ai-widget-results"></div>
+        <div class="ai-widget-actions">
+          <button class="ai-widget-action-btn primary" id="ai-widget-solve">🚀 Giải bằng AI</button>
+          <button class="ai-widget-action-btn danger" id="ai-widget-stop" style="display:none;">⛔ Dừng lại</button>
+          <button class="ai-widget-action-btn secondary" id="ai-widget-clear">🗑️ Xóa kết quả</button>
+        </div>
       </div>
     </div>
   `;
 
   document.body.appendChild(widget);
+  widgetState.isMinimized = true;
   loadWidgetSettings();
   bindWidgetEvents();
   console.log('[AI Widget] Widget created');
@@ -233,28 +241,40 @@ function loadWidgetSettings() {
 }
 
 function bindWidgetEvents() {
+  const collapsedView = document.getElementById('ai-widget-collapsed');
   const header = document.getElementById('ai-widget-header');
-  const minimizeBtn = document.getElementById('ai-widget-minimize');
+  const closeBtn = document.getElementById('ai-widget-close');
   const solveBtn = document.getElementById('ai-widget-solve');
   const stopBtn = document.getElementById('ai-widget-stop');
   const clearBtn = document.getElementById('ai-widget-clear');
+
+  collapsedView.addEventListener('click', expandWidget);
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    collapseWidget();
+  });
 
   header.addEventListener('mousedown', startDragging);
   document.addEventListener('mousemove', drag);
   document.addEventListener('mouseup', stopDragging);
 
-  minimizeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleMinimize();
-  });
-
-  widget.addEventListener('click', (e) => {
-    if (widgetState.isMinimized) toggleMinimize();
-  });
-
   solveBtn.addEventListener('click', handleWidgetSolve);
   stopBtn.addEventListener('click', handleWidgetStop);
   clearBtn.addEventListener('click', handleWidgetClear);
+}
+
+function expandWidget() {
+  widgetState.isMinimized = false;
+  widget.classList.remove('collapsed');
+  document.getElementById('ai-widget-collapsed').style.display = 'none';
+  document.querySelector('.ai-widget-expanded-view').style.display = 'block';
+}
+
+function collapseWidget() {
+  widgetState.isMinimized = true;
+  widget.classList.add('collapsed');
+  document.getElementById('ai-widget-collapsed').style.display = 'flex';
+  document.querySelector('.ai-widget-expanded-view').style.display = 'none';
 }
 
 function startDragging(e) {
@@ -276,16 +296,6 @@ function drag(e) {
 function stopDragging() {
   widgetState.isDragging = false;
   widget.classList.remove('dragging');
-}
-
-function toggleMinimize() {
-  widgetState.isMinimized = !widgetState.isMinimized;
-  widget.classList.toggle('minimized');
-  const minimizeBtn = document.getElementById('ai-widget-minimize');
-  if (minimizeBtn) {
-    minimizeBtn.textContent = widgetState.isMinimized ? '+' : '−';
-    minimizeBtn.title = widgetState.isMinimized ? 'Mở rộng' : 'Thu gọn';
-  }
 }
 
 async function handleWidgetSolve() {

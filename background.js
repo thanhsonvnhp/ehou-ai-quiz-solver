@@ -91,12 +91,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'getSettings') {
-    chrome.storage.sync.get(['apiKey', 'apiEndpoint', 'model', 'provider'], (items) => {
+    chrome.storage.sync.get(null, (items) => {
       const provider = items.provider || CONFIG.DEFAULT_PROVIDER;
       const defaults = CONFIG.getDefaultSettings(provider);
+      const apiKey = items[`apiKey_${provider}`] || '';
       sendResponse({
-        apiKey: items.apiKey || '',
-        apiEndpoint: items.apiEndpoint || defaults.apiEndpoint, // Empty for Gemini, will be built dynamically
+        apiKey: apiKey,
+        apiEndpoint: items.apiEndpoint || defaults.apiEndpoint,
         model: items.model || defaults.model,
         provider: provider
       });
@@ -123,12 +124,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleSolveWithAI(questionData) {
   // Lấy cấu hình API từ storage
   const settings = await new Promise((resolve) => {
-    chrome.storage.sync.get(['apiKey', 'apiEndpoint', 'model', 'provider'], (items) => {
+    chrome.storage.sync.get(null, (items) => {
       const provider = items.provider || CONFIG.DEFAULT_PROVIDER;
       const defaults = CONFIG.getDefaultSettings(provider);
+      const apiKey = items[`apiKey_${provider}`] || '';
       resolve({
-        apiKey: items.apiKey || '',
-        apiEndpoint: items.apiEndpoint || defaults.apiEndpoint, // Empty for Gemini, will be built dynamically
+        apiKey: apiKey,
+        apiEndpoint: items.apiEndpoint || defaults.apiEndpoint,
         model: items.model || defaults.model,
         provider: provider
       });

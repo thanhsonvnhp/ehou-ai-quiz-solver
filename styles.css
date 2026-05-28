@@ -5,24 +5,57 @@
   position: fixed;
   bottom: 20px;
   right: 20px;
+  z-index: 999999;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed state: small bubble */
+#ai-quiz-widget.collapsed {
+  width: auto;
+}
+
+.ai-widget-collapsed-view {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5);
+  transition: all 0.2s ease;
+  user-select: none;
+  max-width: 240px;
+}
+
+.ai-widget-collapsed-view:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(102, 126, 234, 0.6);
+}
+
+.ai-widget-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.ai-widget-greeting {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Expanded state */
+.ai-widget-expanded-view {
   width: 400px;
   max-height: 600px;
   background: white;
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  z-index: 999999;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-}
-
-#ai-quiz-widget.minimized {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  max-height: 60px;
 }
 
 #ai-quiz-widget.dragging {
@@ -43,12 +76,6 @@
   border-radius: 16px 16px 0 0;
 }
 
-#ai-quiz-widget.minimized .ai-widget-header {
-  border-radius: 50%;
-  padding: 18px;
-  justify-content: center;
-}
-
 .ai-widget-title {
   font-size: 16px;
   font-weight: 600;
@@ -57,21 +84,9 @@
   gap: 8px;
 }
 
-#ai-quiz-widget.minimized .ai-widget-title {
-  font-size: 24px;
-}
-
 .ai-widget-controls {
   display: flex;
   gap: 8px;
-}
-
-#ai-quiz-widget.minimized .ai-widget-controls {
-  display: none;
-}
-
-#ai-quiz-widget.minimized .ai-widget-title-text {
-  display: none;
 }
 
 .ai-widget-btn {
@@ -86,7 +101,8 @@
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
-  font-size: 16px;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .ai-widget-btn:hover {
@@ -101,10 +117,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-#ai-quiz-widget.minimized .ai-widget-body {
-  display: none;
 }
 
 /* Settings Info */

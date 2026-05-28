@@ -59,15 +59,19 @@ function populateModels() {
 }
 
 function loadSettings() {
-  chrome.runtime.sendMessage({ action: 'getSettings' }, (response) => {
-    if (response) {
-      const defaults = CONFIG.getDefaultSettings(response.provider || CONFIG.DEFAULT_PROVIDER);
-      apiKeyInput.value = response.apiKey || '';
-      apiEndpointInput.value = response.apiEndpoint || defaults.apiEndpoint;
-      modelSelect.value = response.model || defaults.model;
-      providerSelect.value = response.provider || CONFIG.DEFAULT_PROVIDER;
-      handleProviderChange();
-    }
+  chrome.storage.sync.get(null, (items) => {
+    const provider = items.provider || CONFIG.DEFAULT_PROVIDER;
+    const defaults = CONFIG.getDefaultSettings(provider);
+
+    providerSelect.value = provider;
+    apiEndpointInput.value = items.apiEndpoint || defaults.apiEndpoint;
+    modelSelect.value = items.model || defaults.model;
+
+    // Load API key riêng theo provider (không fallback)
+    const providerKey = items[`apiKey_${provider}`] || '';
+    apiKeyInput.value = providerKey;
+
+    handleProviderChange(true);
   });
 }
 
@@ -85,22 +89,25 @@ function handleSaveSettings() {
     defaultEndpoint = apiEndpointInput.value.trim() || 'https://api.deepseek.com/chat/completions';
   }
 
+  const apiKey = apiKeyInput.value.trim();
+
+  if (!apiKey) {
+    showStatus('❌ Vui lòng nhập API Key!', 'error');
+    return;
+  }
+
   const settings = {
-    apiKey: apiKeyInput.value.trim(),
+    [`apiKey_${provider}`]: apiKey,
+    apiKey: apiKey,
     apiEndpoint: defaultEndpoint,
     model: modelSelect.value,
     provider: provider
   };
 
-  if (!settings.apiKey) {
-    showStatus('❌ Vui lòng nhập API Key!', 'error');
-    return;
-  }
-
   saveSettingsBtn.disabled = true;
   saveSettingsBtn.textContent = '⏳ Đang lưu...';
 
-  chrome.runtime.sendMessage({ action: 'saveSettings', settings }, (response) => {
+  chrome.storage.sync.set(settings, () => {
     saveSettingsBtn.disabled = false;
     saveSettingsBtn.textContent = '💾 Lưu cấu hình';
 
@@ -109,15 +116,11 @@ function handleSaveSettings() {
       return;
     }
 
-    if (response && response.success) {
-      showStatus('✓ Đã lưu cấu hình thành công!', 'success');
-    } else {
-      showStatus('❌ Lỗi khi lưu cấu hình. Vui lòng thử lại.', 'error');
-    }
+    showStatus('✓ Đã lưu cấu hình thành công!', 'success');
   });
 }
 
-function handleProviderChange() {
+function handleProviderChange(skipKeyLoad) {
   const provider = providerSelect.value;
   const openaiModels = document.getElementById('openaiModels');
   const geminiModels = document.getElementById('geminiModels');
@@ -153,6 +156,15 @@ function handleProviderChange() {
     endpointGroup.style.display = 'block';
     apiEndpointInput.value = CONFIG.OPENAI.DEFAULT_ENDPOINT;
     apiKeyInput.placeholder = 'sk-proj-...';
+  }
+
+  // Load API key đã lưu cho provider được chọn (chỉ skip khi init lần đầu)
+  if (skipKeyLoad !== true) {
+    chrome.storage.sync.get([`apiKey_${provider}`], (items) => {
+      const savedKey = items[`apiKey_${provider}`];
+      apiKeyInput.value = savedKey || '';
+      console.log(`[Provider Change] ${provider} -> key:`, savedKey ? 'found' : 'empty');
+    });
   }
 }
 

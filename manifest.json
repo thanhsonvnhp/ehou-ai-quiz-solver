@@ -13,7 +13,8 @@
     "https://api.openai.com/*",
     "https://generativelanguage.googleapis.com/*",
     "https://api.anthropic.com/*",
-    "https://api.deepseek.com/*"
+    "https://api.deepseek.com/*",
+    "https://localhost:61930/*"
   ],
   "background": {
     "service_worker": "background.js",

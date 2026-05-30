@@ -8,6 +8,14 @@ const CONFIG = {
     MIN_REQUEST_INTERVAL: 10000,
     REQUEST_TIMEOUT: 30000
   },
+  BACKEND_API: {
+    BASE_URL: 'https://localhost:61930',
+    ENDPOINTS: {
+      RESOLVE: '/api/questions/resolve',
+      SAVE: '/api/questions/save',
+      DISABLE: '/api/questions/disable'
+    }
+  },
   GEMINI: {
     API_VERSION_V1BETA: 'v1beta',
     BASE_URL: 'https://generativelanguage.googleapis.com',
@@ -118,11 +126,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true; // QUAN TRỌNG: Giữ message channel mở cho async callback
   }
+
+  if (request.action === 'saveQuizResults') {
+    handleSaveQuizResults(request.data)
+      .then(result => sendResponse({ success: true, data: result }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'disableQuestion') {
+    handleDisableQuestion(request.questionHash)
+      .then(result => sendResponse({ success: true, data: result }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
 });
 
 // Hàm chính xử lý giải câu hỏi bằng AI
 async function handleSolveWithAI(questionData) {
-  // Lấy cấu hình API từ storage
+  // Bước 1: Check cache từ backend API trước
+  try {
+    const cached = await resolveFromCache(questionData);
+    if (cached && cached.found) {
+      console.log('✅ Cache hit! Trả về đáp án từ database:', cached.correctAnswerText);
+      return {
+        answer: cached.correctAnswerText,
+        explanation: cached.explanation || '',
+        fromCache: true
+      };
+    }
+  } catch (cacheError) {
+    // Nếu backend không khả dụng thì bỏ qua, tiếp tục dùng AI
+    console.warn('⚠️ Không thể kết nối backend cache, dùng AI:', cacheError.message);
+  }
+
+  // Bước 2: Lấy cấu hình API từ storage
   const settings = await new Promise((resolve) => {
     chrome.storage.sync.get(null, (items) => {
       const provider = items.provider || CONFIG.DEFAULT_PROVIDER;
@@ -148,6 +186,91 @@ async function handleSolveWithAI(questionData) {
   const result = await callAIAPI(settings, prompt);
 
   return result;
+}
+
+// Gọi backend API để resolve câu hỏi từ cache
+async function resolveFromCache(questionData) {
+  const url = `${CONFIG.BACKEND_API.BASE_URL}${CONFIG.BACKEND_API.ENDPOINTS.RESOLVE}`;
+  const body = {
+    questionText: questionData.question,
+    options: questionData.answers.map(a => a.text),
+    sourceUrl: questionData.sourceUrl || '',
+    courseCode: questionData.courseCode || ''
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.success ? data.data : null;
+}
+
+// Lưu kết quả bài kiểm tra vào backend
+async function handleSaveQuizResults(quizData) {
+  const settings = await new Promise((resolve) => {
+    chrome.storage.sync.get(null, (items) => {
+      const provider = items.provider || CONFIG.DEFAULT_PROVIDER;
+      const model = items.model || CONFIG.getDefaultSettings(provider).model;
+      resolve({ provider, model });
+    });
+  });
+
+  const url = `${CONFIG.BACKEND_API.BASE_URL}${CONFIG.BACKEND_API.ENDPOINTS.SAVE}`;
+  const results = [];
+
+  for (const item of quizData.questions) {
+    try {
+      const body = {
+        questionText: item.questionText,
+        options: item.options,
+        correctAnswerText: item.correctAnswerText,
+        explanation: item.explanation || '',
+        aiProvider: settings.provider,
+        aiModel: settings.model,
+        deviceId: quizData.deviceId || '',
+        sourceUrl: quizData.sourceUrl || '',
+        courseCode: quizData.courseCode || ''
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+      results.push({ success: response.ok && data.success, questionText: item.questionText });
+    } catch (err) {
+      results.push({ success: false, questionText: item.questionText, error: err.message });
+    }
+  }
+
+  const savedCount = results.filter(r => r.success).length;
+  return { savedCount, total: quizData.questions.length, results };
+}
+
+// Vô hiệu hóa câu hỏi sai trong cache
+async function handleDisableQuestion(questionHash) {
+  const url = `${CONFIG.BACKEND_API.BASE_URL}${CONFIG.BACKEND_API.ENDPOINTS.DISABLE}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ questionHash })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.data;
 }
 
 // Tạo prompt gửi cho AI

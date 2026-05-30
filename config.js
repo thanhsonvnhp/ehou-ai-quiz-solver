@@ -104,6 +104,16 @@ const CONFIG = {
     DEEPSEEK_AUTH_ERROR: `❌ Lỗi xác thực DeepSeek API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://platform.deepseek.com/api_keys\n3. Đảm bảo API Key bắt đầu bằng "sk-..."`
   },
 
+  // Backend API Configuration
+  BACKEND_API: {
+    BASE_URL: 'https://localhost:61930',
+    ENDPOINTS: {
+      RESOLVE: '/api/questions/resolve',
+      SAVE: '/api/questions/save',
+      DISABLE: '/api/questions/disable'
+    }
+  },
+
   // API Links
   LINKS: {
     OPENAI_API_KEY: 'https://platform.openai.com/api-keys',

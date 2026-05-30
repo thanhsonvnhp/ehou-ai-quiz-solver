@@ -154,6 +154,179 @@ function clearAllHighlights() {
   document.querySelectorAll('.ai-suggestion-badge').forEach(badge => badge.remove());
 }
 
+// ========== QUIZ RESULT DETECTION & SAVE ==========
+
+// Lưu kết quả AI vào sessionStorage để dùng lại sau khi trang reload
+function persistAIResults() {
+  try {
+    sessionStorage.setItem('ai_quiz_results', JSON.stringify(widgetState.results));
+  } catch (e) {
+    console.warn('[AI Widget] Không thể lưu vào sessionStorage:', e);
+  }
+}
+
+// Đọc lại kết quả AI đã lưu, trả về map questionText -> { explanation, answer }
+function loadPersistedAIResults() {
+  try {
+    const raw = sessionStorage.getItem('ai_quiz_results');
+    if (!raw) return {};
+    const results = JSON.parse(raw);
+    const map = {};
+    for (const r of results) {
+      if (r.questionText) {
+        map[r.questionText] = { explanation: r.explanation || '', answer: r.answer || '' };
+      }
+    }
+    return map;
+  } catch (e) {
+    return {};
+  }
+}
+
+// Kiểm tra xem trang hiện tại có phải trang kết quả bài kiểm tra không
+// Trang kết quả có các element .correct/.incorrect hoặc .rightanswer
+function isQuizResultPage() {
+  return (
+    document.querySelector('.que .correct') !== null ||
+    document.querySelector('.que .incorrect') !== null ||
+    document.querySelector('.rightanswer') !== null ||
+    document.querySelector('.que.correct') !== null ||
+    document.querySelector('.que.incorrect') !== null
+  );
+}
+
+// Trích xuất câu hỏi và đáp án đúng từ trang kết quả
+function extractQuizResultQuestions() {
+  const questions = [];
+  const questionElements = document.querySelectorAll('.que.multichoice, .que');
+  const aiResultsMap = loadPersistedAIResults();
+
+  questionElements.forEach((questionEl, index) => {
+    try {
+      const qtextEl = questionEl.querySelector('.qtext');
+      if (!qtextEl) return;
+
+      const questionText = cleanText(qtextEl.innerText || qtextEl.textContent);
+      const options = [];
+      let correctAnswerText = null;
+
+      const answerEls = questionEl.querySelectorAll('.answer .r0, .answer .r1');
+      answerEls.forEach((answerEl) => {
+        const label = answerEl.querySelector('label');
+        if (!label) return;
+
+        const answerText = cleanText(label.innerText || label.textContent);
+        const cleaned = answerText.replace(/^[a-z]\.\s*/i, '');
+        options.push(cleaned);
+
+        // Đáp án đúng: có class .correct hoặc có icon ✓ (fa-check)
+        const isCorrect =
+          answerEl.classList.contains('correct') ||
+          answerEl.querySelector('.fa-check') !== null ||
+          answerEl.querySelector('[class*="correct"]') !== null;
+
+        if (isCorrect && !correctAnswerText) {
+          correctAnswerText = cleaned;
+        }
+      });
+
+      // Fallback: tìm trong .rightanswer
+      if (!correctAnswerText) {
+        const rightAnswerEl = questionEl.querySelector('.rightanswer');
+        if (rightAnswerEl) {
+          const rightText = cleanText(rightAnswerEl.innerText || rightAnswerEl.textContent);
+          const match = rightText.match(/:\s*(.+)$/);
+          if (match) correctAnswerText = match[1].replace(/^[a-z]\.\s*/i, '').trim();
+        }
+      }
+
+      if (correctAnswerText && options.length > 0) {
+        // Ghép explanation từ kết quả AI đã lưu trước đó
+        const cached = aiResultsMap[questionText];
+        const explanation = cached ? cached.explanation : '';
+        questions.push({ questionText, options, correctAnswerText, explanation });
+      }
+    } catch (err) {
+      console.warn(`[AI Widget] Lỗi trích xuất câu ${index + 1}:`, err);
+    }
+  });
+
+  return questions;
+}
+
+// Gửi kết quả bài kiểm tra lên backend
+async function saveQuizResults() {
+  const saveBtn = document.getElementById('ai-widget-save-quiz');
+  if (!saveBtn) return;
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = '⏳ Đang lưu...';
+  updateWidgetStatus('💾 Đang lưu bài kiểm tra vào database...', 'info');
+
+  try {
+    const questions = extractQuizResultQuestions();
+
+    if (questions.length === 0) {
+      updateWidgetStatus('⚠️ Không tìm thấy câu hỏi có đáp án đúng để lưu.', 'warning');
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Lưu bài kiểm tra';
+      return;
+    }
+
+    const payload = {
+      questions,
+      sourceUrl: window.location.href,
+      courseCode: extractCourseCode(),
+      deviceId: await getDeviceId()
+    };
+
+    const response = await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ action: 'saveQuizResults', data: payload }, (res) => {
+        if (res && res.success) resolve(res.data);
+        else reject(new Error(res?.error || 'Unknown error'));
+      });
+    });
+
+    updateWidgetStatus(
+      `✅ Đã lưu ${response.savedCount}/${response.total} câu hỏi vào database!`,
+      'success'
+    );
+    saveBtn.textContent = `✅ Đã lưu (${response.savedCount}/${response.total})`;
+  } catch (err) {
+    updateWidgetStatus(`❌ Lỗi khi lưu: ${err.message}`, 'error');
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Lưu bài kiểm tra';
+  }
+}
+
+function extractCourseCode() {
+  // Lấy tên môn học từ .home-coursename, ví dụ "Mạng và truyền thông - IT11.068"
+  const courseNameEl = document.querySelector('.home-coursename a, .coursename a');
+  if (courseNameEl) {
+    return courseNameEl.textContent.trim();
+  }
+  // Fallback: lấy từ URL hoặc breadcrumb
+  const match = window.location.href.match(/course=(\d+)/);
+  if (match) return match[1];
+  const breadcrumb = document.querySelector('.breadcrumb-item a[href*="course"]');
+  if (breadcrumb) {
+    const m = breadcrumb.href.match(/id=(\d+)/);
+    if (m) return m[1];
+  }
+  return '';
+}
+
+async function getDeviceId() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['deviceId'], (items) => {
+      if (items.deviceId) { resolve(items.deviceId); return; }
+      const id = 'ext-' + Math.random().toString(36).substr(2, 12);
+      chrome.storage.local.set({ deviceId: id });
+      resolve(id);
+    });
+  });
+}
+
 // ========== FLOATING WIDGET ==========
 
 let widget = null;
@@ -174,33 +347,25 @@ function createWidget() {
 
   widget = document.createElement('div');
   widget.id = 'ai-quiz-widget';
-  widget.className = 'collapsed';
+  widget.className = '';
   widget.innerHTML = `
-    <div class="ai-widget-collapsed-view" id="ai-widget-collapsed">
+    <div class="ai-widget-collapsed-view" id="ai-widget-collapsed" style="display:none;">
       <div class="ai-widget-icon">🤖</div>
       <div class="ai-widget-greeting">Tôi là trợ lý AI<br>hãy để tôi giúp bạn</div>
     </div>
-    <div class="ai-widget-expanded-view" style="display:none;">
+    <div class="ai-widget-expanded-view">
       <div class="ai-widget-header" id="ai-widget-header">
         <div class="ai-widget-title">
           <span>🤖</span>
-          <span class="ai-widget-title-text">Trợ Lý Học Tập HOU E-Learning AI</span>
+          <span class="ai-widget-title-text">Trợ Lý AI</span>
         </div>
         <div class="ai-widget-controls">
+          <button class="ai-widget-btn" id="ai-widget-minimize" title="Thu gọn">−</button>
           <button class="ai-widget-btn" id="ai-widget-close" title="Đóng">×</button>
         </div>
       </div>
       <div class="ai-widget-body">
-        <div class="ai-widget-settings">
-          <div class="ai-widget-settings-row">
-            <span class="ai-widget-settings-label">Provider:</span>
-            <span class="ai-widget-settings-value" id="ai-widget-provider">-</span>
-          </div>
-          <div class="ai-widget-settings-row">
-            <span class="ai-widget-settings-label">Model:</span>
-            <span class="ai-widget-settings-value" id="ai-widget-model">-</span>
-          </div>
-        </div>
+        <div class="ai-widget-status info" id="ai-widget-status">Sẵn sàng giải đề</div>
         <div class="ai-widget-stats" id="ai-widget-stats" style="display:none;">
           <div class="ai-widget-stat">
             <div class="ai-widget-stat-value" id="ai-widget-total">0</div>
@@ -211,19 +376,19 @@ function createWidget() {
             <div class="ai-widget-stat-label">Đã giải</div>
           </div>
         </div>
-        <div class="ai-widget-status info" id="ai-widget-status">Sẵn sàng giải đề</div>
         <div class="ai-widget-results" id="ai-widget-results"></div>
         <div class="ai-widget-actions">
           <button class="ai-widget-action-btn primary" id="ai-widget-solve">🚀 Giải bằng AI</button>
           <button class="ai-widget-action-btn danger" id="ai-widget-stop" style="display:none;">⛔ Dừng lại</button>
           <button class="ai-widget-action-btn secondary" id="ai-widget-clear">🗑️ Xóa kết quả</button>
+          <button class="ai-widget-action-btn save-quiz" id="ai-widget-save-quiz" style="display:none;">💾 Lưu bài kiểm tra</button>
         </div>
       </div>
     </div>
   `;
 
   document.body.appendChild(widget);
-  widgetState.isMinimized = true;
+  widgetState.isMinimized = false;
   loadWidgetSettings();
   bindWidgetEvents();
   console.log('[AI Widget] Widget created');
@@ -243,15 +408,21 @@ function loadWidgetSettings() {
 function bindWidgetEvents() {
   const collapsedView = document.getElementById('ai-widget-collapsed');
   const header = document.getElementById('ai-widget-header');
+  const minimizeBtn = document.getElementById('ai-widget-minimize');
   const closeBtn = document.getElementById('ai-widget-close');
   const solveBtn = document.getElementById('ai-widget-solve');
   const stopBtn = document.getElementById('ai-widget-stop');
   const clearBtn = document.getElementById('ai-widget-clear');
+  const saveQuizBtn = document.getElementById('ai-widget-save-quiz');
 
   collapsedView.addEventListener('click', expandWidget);
-  closeBtn.addEventListener('click', (e) => {
+  minimizeBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     collapseWidget();
+  });
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    widget.style.display = 'none';
   });
 
   header.addEventListener('mousedown', startDragging);
@@ -261,6 +432,14 @@ function bindWidgetEvents() {
   solveBtn.addEventListener('click', handleWidgetSolve);
   stopBtn.addEventListener('click', handleWidgetStop);
   clearBtn.addEventListener('click', handleWidgetClear);
+  saveQuizBtn.addEventListener('click', saveQuizResults);
+
+  // Hiển thị nút lưu nếu đang ở trang kết quả bài kiểm tra
+  if (isQuizResultPage()) {
+    saveQuizBtn.style.display = 'block';
+    solveBtn.style.display = 'none';
+    updateWidgetStatus('📋 Trang kết quả - Nhấn "Lưu bài kiểm tra"', 'info');
+  }
 }
 
 function expandWidget() {
@@ -351,7 +530,16 @@ async function handleWidgetSolve() {
           break;
         }
 
-        widgetState.results.push({ questionIndex: i, questionNumber: question.questionNumber, answer: result.answer });
+        widgetState.results.push({
+          questionIndex: i,
+          questionNumber: question.questionNumber,
+          answer: result.answer,
+          explanation: result.explanation || '',
+          questionText: question.question,
+          options: question.answers.map(a => a.text),
+          fromCache: result.fromCache || false
+        });
+        persistAIResults();
         highlightCorrectAnswer(i, result.answer, true);
         displayWidgetResult(question, result);
         document.getElementById('ai-widget-solved').textContent = widgetState.results.length;

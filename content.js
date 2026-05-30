@@ -277,7 +277,9 @@ async function saveQuizResults() {
       questions,
       sourceUrl: window.location.href,
       courseCode: extractCourseCode(),
-      deviceId: await getDeviceId()
+      deviceId: await getDeviceId(),
+      userName: widgetState.userInfo?.userName || null,
+      userId: widgetState.userInfo?.userId || null
     };
 
     const response = await new Promise((resolve, reject) => {
@@ -339,11 +341,68 @@ let widgetState = {
   initialY: 0,
   results: [],
   isSolving: false,
-  currentAbortController: null
+  currentAbortController: null,
+  userInfo: null
 };
+
+// Trích xuất thông tin user từ trang Moodle
+function extractUserInfo() {
+  try {
+    let userName = null;
+    let userId = null;
+
+    // Cách 1: Từ biến JS toàn cục M.cfg (Moodle config)
+    if (typeof M !== 'undefined' && M.cfg) {
+      userId = M.cfg.userid || null;
+    }
+
+    // Cách 2: Từ DOM - tên user trong header
+    const userTextEl = document.querySelector('.usermenu .usertext, .usertext');
+    if (userTextEl) {
+      userName = userTextEl.textContent.trim();
+    }
+
+    // Cách 3: Từ link profile
+    if (!userName || !userId) {
+      const profileLink = document.querySelector('a[href*="user/profile.php"], a[href*="user/view.php"]');
+      if (profileLink) {
+        if (!userName) userName = profileLink.textContent.trim();
+        if (!userId) {
+          try {
+            const url = new URL(profileLink.href);
+            userId = url.searchParams.get('id');
+          } catch (e) {}
+        }
+      }
+    }
+
+    // Cách 4: Từ data attribute
+    if (!userId) {
+      const userEl = document.querySelector('[data-userid]');
+      if (userEl) userId = userEl.dataset.userid;
+    }
+
+    // Cách 5: Từ dropdown menu user
+    if (!userName) {
+      const dropdownName = document.querySelector('.usermenu .menu .dropdown-item strong, .usermenu strong');
+      if (dropdownName) userName = dropdownName.textContent.trim();
+    }
+
+    return {
+      userName: userName || 'Người dùng',
+      userId: userId || null
+    };
+  } catch (error) {
+    console.warn('[AI Widget] Không thể lấy thông tin user:', error);
+    return { userName: 'Người dùng', userId: null };
+  }
+}
 
 function createWidget() {
   if (document.getElementById('ai-quiz-widget')) return;
+
+  widgetState.userInfo = extractUserInfo();
+  const { userName } = widgetState.userInfo;
 
   widget = document.createElement('div');
   widget.id = 'ai-quiz-widget';
@@ -361,8 +420,11 @@ function createWidget() {
         </div>
         <div class="ai-widget-controls">
           <button class="ai-widget-btn" id="ai-widget-minimize" title="Thu gọn">−</button>
-          <button class="ai-widget-btn" id="ai-widget-close" title="Đóng">×</button>
         </div>
+      </div>
+      <div class="ai-widget-user-info" id="ai-widget-user-info">
+        <span class="ai-widget-user-icon">👤</span>
+        <span class="ai-widget-user-name" id="ai-widget-user-name">${userName}</span>
       </div>
       <div class="ai-widget-body">
         <div class="ai-widget-status info" id="ai-widget-status">Sẵn sàng giải đề</div>
@@ -389,27 +451,15 @@ function createWidget() {
 
   document.body.appendChild(widget);
   widgetState.isMinimized = false;
-  loadWidgetSettings();
   bindWidgetEvents();
-  console.log('[AI Widget] Widget created');
-}
-
-function loadWidgetSettings() {
-  chrome.storage.sync.get(['provider', 'model'], (items) => {
-    const provider = items.provider || 'gemini';
-    const model = items.model || 'gemini-3.5-flash';
-    const providerEl = document.getElementById('ai-widget-provider');
-    const modelEl = document.getElementById('ai-widget-model');
-    if (providerEl) providerEl.textContent = provider.toUpperCase();
-    if (modelEl) modelEl.textContent = model;
-  });
+  console.log('[AI Widget] Widget created, user:', userName);
 }
 
 function bindWidgetEvents() {
   const collapsedView = document.getElementById('ai-widget-collapsed');
   const header = document.getElementById('ai-widget-header');
   const minimizeBtn = document.getElementById('ai-widget-minimize');
-  const closeBtn = document.getElementById('ai-widget-close');
+  // const closeBtn = document.getElementById('ai-widget-close');
   const solveBtn = document.getElementById('ai-widget-solve');
   const stopBtn = document.getElementById('ai-widget-stop');
   const clearBtn = document.getElementById('ai-widget-clear');
@@ -420,10 +470,10 @@ function bindWidgetEvents() {
     e.stopPropagation();
     collapseWidget();
   });
-  closeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    widget.style.display = 'none';
-  });
+  // closeBtn.addEventListener('click', (e) => {
+  //   e.stopPropagation();
+  //   widget.style.display = 'none';
+  // });
 
   header.addEventListener('mousedown', startDragging);
   document.addEventListener('mousemove', drag);

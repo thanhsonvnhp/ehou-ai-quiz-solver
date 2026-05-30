@@ -236,7 +236,9 @@ async function handleSaveQuizResults(quizData) {
         aiModel: settings.model,
         deviceId: quizData.deviceId || '',
         sourceUrl: quizData.sourceUrl || '',
-        courseCode: quizData.courseCode || ''
+        courseCode: quizData.courseCode || '',
+        userName: quizData.userName || '',
+        userId: quizData.userId || ''
       };
 
       const response = await fetch(url, {

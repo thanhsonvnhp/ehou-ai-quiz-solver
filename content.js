@@ -117,10 +117,35 @@ function highlightCorrectAnswer(questionIndex, answerLabel, autoCheck = false) {
   clearHighlightForQuestion(questionEl);
 
   const answerEls = questionEl.querySelectorAll('.answer .r0, .answer .r1');
-  const answerIndex = answerLabel.charCodeAt(0) - 65;
 
-  if (answerIndex >= 0 && answerIndex < answerEls.length) {
-    const targetAnswer = answerEls[answerIndex];
+  // Tìm index đáp án: ưu tiên chữ cái A/B/C/D, fallback so khớp text
+  let targetAnswer = null;
+
+  const singleLetter = answerLabel.trim().match(/^([A-Za-z])\.?$/);
+  if (singleLetter) {
+    const answerIndex = singleLetter[1].toUpperCase().charCodeAt(0) - 65;
+    if (answerIndex >= 0 && answerIndex < answerEls.length) {
+      targetAnswer = answerEls[answerIndex];
+    }
+  }
+
+  // Fallback: so khớp text nếu AI trả về nội dung đáp án thay vì chữ cái
+  if (!targetAnswer) {
+    const normalizedLabel = answerLabel.trim().toLowerCase();
+    for (const el of answerEls) {
+      const label = el.querySelector('label');
+      if (!label) continue;
+      const text = cleanText(label.innerText || label.textContent)
+        .replace(/^[a-z]\.\s*/i, '')
+        .toLowerCase();
+      if (text === normalizedLabel || text.includes(normalizedLabel) || normalizedLabel.includes(text)) {
+        targetAnswer = el;
+        break;
+      }
+    }
+  }
+
+  if (targetAnswer) {
     targetAnswer.classList.add('ai-highlight-correct');
 
     if (autoCheck) {
@@ -219,11 +244,11 @@ function extractQuizResultQuestions() {
         const cleaned = answerText.replace(/^[a-z]\.\s*/i, '');
         options.push(cleaned);
 
-        // Đáp án đúng: có class .correct hoặc có icon ✓ (fa-check)
+        // Đáp án đúng: có class .correct hoặc img grade_correct
         const isCorrect =
           answerEl.classList.contains('correct') ||
-          answerEl.querySelector('.fa-check') !== null ||
-          answerEl.querySelector('[class*="correct"]') !== null;
+          answerEl.querySelector('img[src*="grade_correct"]') !== null ||
+          answerEl.querySelector('.fa-check') !== null;
 
         if (isCorrect && !correctAnswerText) {
           correctAnswerText = cleaned;
@@ -241,6 +266,12 @@ function extractQuizResultQuestions() {
       }
 
       if (correctAnswerText && options.length > 0) {
+        // Chỉ lưu nếu người dùng trả lời đúng (không có đáp án sai được chọn)
+        const hasIncorrectSelected = Array.from(answerEls).some(el =>
+          el.classList.contains('incorrect') ||
+          el.querySelector('img[src*="grade_incorrect"]') !== null
+        );
+        if (hasIncorrectSelected) return;
         // Ghép explanation từ kết quả AI đã lưu trước đó
         const cached = aiResultsMap[questionText];
         const explanation = cached ? cached.explanation : '';
@@ -279,7 +310,8 @@ async function saveQuizResults() {
       courseCode: extractCourseCode(),
       deviceId: await getDeviceId(),
       userName: widgetState.userInfo?.userName || null,
-      userId: widgetState.userInfo?.userId || null
+      userId: widgetState.userInfo?.userId || null,
+      userAccount: widgetState.userInfo?.userAccount || null
     };
 
     const response = await new Promise((resolve, reject) => {
@@ -348,53 +380,74 @@ let widgetState = {
 // Trích xuất thông tin user từ trang Moodle
 function extractUserInfo() {
   try {
-    let userName = null;
+    let userName = null; // Họ tên đầy đủ
     let userId = null;
+    let userAccount = null; // Tên đăng nhập (username)
 
     // Cách 1: Từ biến JS toàn cục M.cfg (Moodle config)
     if (typeof M !== 'undefined' && M.cfg) {
       userId = M.cfg.userid || null;
     }
 
-    // Cách 2: Từ DOM - tên user trong header
-    const userTextEl = document.querySelector('.usermenu .usertext, .usertext');
-    if (userTextEl) {
-      userName = userTextEl.textContent.trim();
+    // Cách 2: Từ link profile trong .userinfo
+    const profileLink = document.querySelector('.userinfo a[href*="user/view.php"], a[href*="user/view.php"]');
+    if (profileLink) {
+      // Lấy userId từ URL: https://learning.ehou.edu.vn/user/view.php?id=123456
+      try {
+        const url = new URL(profileLink.href);
+        const idParam = url.searchParams.get('id');
+        if (idParam) userId = idParam;
+      } catch (e) {}
     }
 
-    // Cách 3: Từ link profile
-    if (!userName || !userId) {
-      const profileLink = document.querySelector('a[href*="user/profile.php"], a[href*="user/view.php"]');
-      if (profileLink) {
-        if (!userName) userName = profileLink.textContent.trim();
-        if (!userId) {
-          try {
-            const url = new URL(profileLink.href);
-            userId = url.searchParams.get('id');
-          } catch (e) {}
-        }
+    // Cách 3: Từ avatar image
+    const avatarImg = document.querySelector('.userinfo img.userpicture, img.userpicture[src*="avatar"]');
+    if (avatarImg) {
+      // Lấy userAccount từ src: http://account.ehou.edu.vn/avatar/w210-h210/ten_tai_khoan.jpg
+      const srcMatch = avatarImg.src.match(/\/avatar\/[^\/]+\/([^\.\/]+)\.(jpg|png|gif)/i);
+      if (srcMatch) {
+        userAccount = srcMatch[1];
+      }
+
+      // Lấy userName (họ tên) từ alt hoặc title: "Hình của Nguyễn Văn A"
+      const altText = avatarImg.alt || avatarImg.title || '';
+      const altMatch = altText.match(/Hình của\s+(.+)/i);
+      if (altMatch) {
+        userName = altMatch[1].trim();
       }
     }
 
-    // Cách 4: Từ data attribute
+    // Cách 4: Từ DOM - tên user trong header/menu (fallback cho userName)
+    if (!userName) {
+      const userTextEl = document.querySelector('.usermenu .usertext, .usertext, .username');
+      if (userTextEl) {
+        userName = userTextEl.textContent.trim();
+      }
+    }
+
+    // Cách 5: Từ data attribute
     if (!userId) {
       const userEl = document.querySelector('[data-userid]');
       if (userEl) userId = userEl.dataset.userid;
     }
 
-    // Cách 5: Từ dropdown menu user
-    if (!userName) {
-      const dropdownName = document.querySelector('.usermenu .menu .dropdown-item strong, .usermenu strong');
-      if (dropdownName) userName = dropdownName.textContent.trim();
+    // Fallback: nếu không có userName thì dùng userAccount
+    if (!userName && userAccount) {
+      userName = userAccount;
     }
 
+    // Hiển thị userName (họ tên) trên widget, fallback về userAccount hoặc "Người dùng"
+    const displayName = userName || userAccount || 'Người dùng';
+
     return {
-      userName: userName || 'Người dùng',
-      userId: userId || null
+      userName: userName || null,
+      userId: userId || null,
+      userAccount: userAccount || null,
+      displayName: displayName
     };
   } catch (error) {
     console.warn('[AI Widget] Không thể lấy thông tin user:', error);
-    return { userName: 'Người dùng', userId: null };
+    return { userName: null, userId: null, userAccount: null, displayName: 'Người dùng' };
   }
 }
 
@@ -402,7 +455,7 @@ function createWidget() {
   if (document.getElementById('ai-quiz-widget')) return;
 
   widgetState.userInfo = extractUserInfo();
-  const { userName } = widgetState.userInfo;
+  const { displayName } = widgetState.userInfo;
 
   widget = document.createElement('div');
   widget.id = 'ai-quiz-widget';
@@ -424,7 +477,7 @@ function createWidget() {
       </div>
       <div class="ai-widget-user-info" id="ai-widget-user-info">
         <span class="ai-widget-user-icon">👤</span>
-        <span class="ai-widget-user-name" id="ai-widget-user-name">${userName}</span>
+        <span class="ai-widget-user-name" id="ai-widget-user-name">${displayName}</span>
       </div>
       <div class="ai-widget-body">
         <div class="ai-widget-status info" id="ai-widget-status">Sẵn sàng giải đề</div>
@@ -452,7 +505,7 @@ function createWidget() {
   document.body.appendChild(widget);
   widgetState.isMinimized = false;
   bindWidgetEvents();
-  console.log('[AI Widget] Widget created, user:', userName);
+  console.log('[AI Widget] Widget created, user:', displayName);
 }
 
 function bindWidgetEvents() {
@@ -671,10 +724,13 @@ function displayWidgetResult(question, result) {
   const resultsEl = document.getElementById('ai-widget-results');
   const el = document.createElement('div');
   el.className = 'ai-widget-result-item';
+  const explanationHtml = result.explanation
+    ? `<div class="ai-widget-result-explanation">${result.explanation}</div>`
+    : '';
   el.innerHTML = `
     <div class="ai-widget-result-number">Câu ${question.questionNumber}</div>
     <div class="ai-widget-result-answer">Đáp án: ${result.answer}</div>
-    <div class="ai-widget-result-explanation">${result.explanation}</div>
+    ${explanationHtml}
   `;
   resultsEl.appendChild(el);
   resultsEl.scrollTop = resultsEl.scrollHeight;

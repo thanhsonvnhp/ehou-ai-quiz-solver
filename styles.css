@@ -230,6 +230,16 @@
   margin-bottom: 6px;
 }
 
+.ai-cache-badge {
+  background: #e8f5e9;
+  color: #388e3c;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
 .ai-widget-result-answer {
   background: #e8f5e9;
   color: #2e7d32;

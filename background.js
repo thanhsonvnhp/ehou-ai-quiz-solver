@@ -238,7 +238,8 @@ async function handleSaveQuizResults(quizData) {
         sourceUrl: quizData.sourceUrl || '',
         courseCode: quizData.courseCode || '',
         userName: quizData.userName || '',
-        userId: quizData.userId || ''
+        userId: quizData.userId || '',
+        userAccount: quizData.userAccount || ''
       };
 
       const response = await fetch(url, {
@@ -621,6 +622,10 @@ async function callDeepSeekAPI(settings, prompt, controller) {
 
     if (response.status === 401 || response.status === 403) {
       throw new Error(`${CONFIG.MESSAGES.DEEPSEEK_AUTH_ERROR}\n\nChi tiết: ${errorMessage}`);
+    }
+
+    if (response.status === 402 || errorMessage.toLowerCase().includes('insufficient balance')) {
+      throw new Error(`❌ Tài khoản DeepSeek hết tiền.\n\nVui lòng nạp thêm tại: https://platform.deepseek.com/usage\nHoặc chuyển sang provider khác trong cài đặt.`);
     }
 
     if (response.status === 429) {

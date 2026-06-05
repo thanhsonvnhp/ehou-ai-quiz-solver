@@ -144,16 +144,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Hàm chính xử lý giải câu hỏi bằng AI
 async function handleSolveWithAI(questionData) {
+  let wrongAnswerTexts = [];
+
   // Bước 1: Check cache từ backend API trước
   try {
     const cached = await resolveFromCache(questionData);
-    if (cached && cached.found) {
-      console.log('✅ Cache hit! Trả về đáp án từ database:', cached.correctAnswerText);
+    if (cached && cached.found && cached.answerStatus === true && cached.correctAnswerText) {
+      console.log('✅ Cache correct answer hit:', cached.correctAnswerText);
       return {
         answer: cached.correctAnswerText,
+        answerText: cached.correctAnswerText,
         explanation: cached.explanation || '',
         fromCache: true
       };
+    }
+
+    if (cached && cached.found && cached.answerStatus === false) {
+      wrongAnswerTexts = Array.isArray(cached.wrongAnswerTexts) ? cached.wrongAnswerTexts : [];
+      console.log('⚠️ Known wrong answers hit:', wrongAnswerTexts);
     }
   } catch (cacheError) {
     // Nếu backend không khả dụng thì bỏ qua, tiếp tục dùng AI
@@ -180,10 +188,15 @@ async function handleSolveWithAI(questionData) {
   }
 
   // Tạo prompt cho AI
-  const prompt = createPrompt(questionData);
+  const prompt = createPrompt(questionData, wrongAnswerTexts);
+  const multimodalParts = buildMultimodalContent(questionData, wrongAnswerTexts);
+  if (wrongAnswerTexts.length > 0) {
+    console.log('🔁 AI retry with excluded answers:', wrongAnswerTexts);
+  }
 
   // Gọi AI API
-  const result = await callAIAPI(settings, prompt);
+  const result = await callAIAPI(settings, prompt, multimodalParts);
+  result.answerText = getAnswerTextFromResult(questionData.answers, result.answer) || result.answer;
 
   return result;
 }
@@ -193,7 +206,9 @@ async function resolveFromCache(questionData) {
   const url = `${CONFIG.BACKEND_API.BASE_URL}${CONFIG.BACKEND_API.ENDPOINTS.RESOLVE}`;
   const body = {
     questionText: questionData.question,
+    questionImages: questionData.questionImages || [],
     options: questionData.answers.map(a => a.text),
+    optionImages: questionData.answers.map(a => a.images || []),
     sourceUrl: questionData.sourceUrl || '',
     courseCode: questionData.courseCode || ''
   };
@@ -229,8 +244,11 @@ async function handleSaveQuizResults(quizData) {
     try {
       const body = {
         questionText: item.questionText,
+        questionImages: item.questionImages || [],
         options: item.options,
-        correctAnswerText: item.correctAnswerText,
+        optionImages: item.optionImages || [],
+        correctAnswerText: item.answerStatus === true ? item.answerText : (item.correctAnswerText || ''),
+        answerText: item.answerText,
         explanation: item.explanation || '',
         aiProvider: settings.provider,
         aiModel: settings.model,
@@ -239,8 +257,16 @@ async function handleSaveQuizResults(quizData) {
         courseCode: quizData.courseCode || '',
         userName: quizData.userName || '',
         userId: quizData.userId || '',
-        userAccount: quizData.userAccount || ''
+        userAccount: quizData.userAccount || '',
+        answerStatus: item.answerStatus,
+        wrongAnswerTexts: item.wrongAnswerTexts || (item.answerStatus === false ? [item.answerText] : null)
       };
+
+      if (item.answerStatus === true) {
+        console.log('💾 Save correct answer:', item.answerText);
+      } else {
+        console.log('💾 Save wrong answer:', item.answerText, '| wrongAnswerTexts:', body.wrongAnswerTexts);
+      }
 
       const response = await fetch(url, {
         method: 'POST',
@@ -249,6 +275,9 @@ async function handleSaveQuizResults(quizData) {
       });
 
       const data = await response.json();
+      if (!response.ok || !data.success) {
+        console.warn('⚠️ Save failed:', item.questionText, '| status:', response.status, '| resp:', JSON.stringify(data));
+      }
       results.push({ success: response.ok && data.success, questionText: item.questionText });
     } catch (err) {
       results.push({ success: false, questionText: item.questionText, error: err.message });
@@ -276,20 +305,59 @@ async function handleDisableQuestion(questionHash) {
   return data.data;
 }
 
-// Tạo prompt gửi cho AI
-function createPrompt(questionData) {
-  let prompt = `Dưới đây là một câu hỏi trắc nghiệm tiếng Việt. 
+function normalizeAnswerText(text) {
+  return (text || '')
+    .toString()
+    .toLowerCase()
+    .replace(/^[a-z]\.?\s*/i, '')
+    .replace(/[​-‍﻿]/g, '')
+    .replace(/[“”"']/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getAnswerTextFromResult(answers, answer) {
+  if (!answer || !Array.isArray(answers)) return '';
+
+  const singleLetter = answer.trim().match(/^([A-Za-z])\.?$/);
+  if (singleLetter) {
+    const answerIndex = singleLetter[1].toUpperCase().charCodeAt(0) - 65;
+    return answers[answerIndex]?.text || '';
+  }
+
+  const normalizedAnswer = normalizeAnswerText(answer);
+  const matched = answers.find(item => normalizeAnswerText(item.text) === normalizedAnswer);
+  return matched?.text || '';
+}
+
+// Tạo prompt gửi cho AI (text-only, dùng khi API không hỗ trợ vision)
+function createPrompt(questionData, wrongAnswerTexts = []) {
+  const hasQuestionImages = questionData.questionImages && questionData.questionImages.length > 0;
+  const hasAnswerImages = questionData.answers && questionData.answers.some(a => a.images && a.images.length > 0);
+
+  let prompt = `Dưới đây là một câu hỏi trắc nghiệm tiếng Việt.
 Hãy chọn đáp án đúng nhất và giải thích ngắn gọn.
 
-Câu hỏi: ${questionData.question}
+Câu hỏi: ${questionData.question}`;
 
-Các đáp án:
-`;
+  if (hasQuestionImages) {
+    prompt += `\n[Câu hỏi có ảnh đính kèm: ${questionData.questionImages.join(', ')}]`;
+  }
+
+  prompt += `\n\nCác đáp án:\n`;
 
   questionData.answers.forEach((answer, index) => {
-    const label = String.fromCharCode(97 + index).toUpperCase(); // A, B, C, D...
-    prompt += `${label}. ${answer.text}\n`;
+    const label = String.fromCharCode(97 + index).toUpperCase();
+    prompt += `${label}. ${answer.text}`;
+    if (answer.images && answer.images.length > 0) {
+      prompt += ` [ảnh: ${answer.images.join(', ')}]`;
+    }
+    prompt += '\n';
   });
+
+  if (wrongAnswerTexts.length > 0) {
+    prompt += `\nCác đáp án sau đã được hệ thống xác nhận là sai, tuyệt đối không chọn lại:\n${wrongAnswerTexts.join('\n')}\n\nHãy phân tích lại câu hỏi và chọn một đáp án khác.\n`;
+  }
 
   prompt += `\nYêu cầu quan trọng:
 1. Trả về kết quả dưới dạng JSON thuần (raw JSON).
@@ -303,12 +371,71 @@ Các đáp án:
   return prompt;
 }
 
+// Xây dựng nội dung multimodal (text + ảnh) cho các API hỗ trợ vision
+function buildMultimodalContent(questionData, wrongAnswerTexts = []) {
+  const parts = [];
+  const hasQuestionImages = questionData.questionImages && questionData.questionImages.length > 0;
+  const hasAnswerImages = questionData.answers && questionData.answers.some(a => a.images && a.images.length > 0);
+
+  if (!hasQuestionImages && !hasAnswerImages) return null;
+
+  let textContent = `Dưới đây là một câu hỏi trắc nghiệm tiếng Việt.
+Hãy chọn đáp án đúng nhất và giải thích ngắn gọn.
+
+Câu hỏi: ${questionData.question}
+`;
+
+  parts.push({ type: 'text', text: textContent });
+
+  if (hasQuestionImages) {
+    for (const url of questionData.questionImages) {
+      parts.push({ type: 'image_url', url });
+    }
+  }
+
+  let answersText = '\nCác đáp án:\n';
+  questionData.answers.forEach((answer, index) => {
+    const label = String.fromCharCode(97 + index).toUpperCase();
+    answersText += `${label}. ${answer.text}\n`;
+  });
+  parts.push({ type: 'text', text: answersText });
+
+  if (hasAnswerImages) {
+    questionData.answers.forEach((answer, index) => {
+      if (answer.images && answer.images.length > 0) {
+        const label = String.fromCharCode(97 + index).toUpperCase();
+        parts.push({ type: 'text', text: `Ảnh cho đáp án ${label}:` });
+        for (const url of answer.images) {
+          parts.push({ type: 'image_url', url });
+        }
+      }
+    });
+  }
+
+  let suffix = '';
+  if (wrongAnswerTexts.length > 0) {
+    suffix += `\nCác đáp án sau đã được hệ thống xác nhận là sai, tuyệt đối không chọn lại:\n${wrongAnswerTexts.join('\n')}\n\nHãy phân tích lại câu hỏi và chọn một đáp án khác.\n`;
+  }
+
+  suffix += `\nYêu cầu quan trọng:
+1. Trả về kết quả dưới dạng JSON thuần (raw JSON).
+2. KHÔNG dùng markdown block (\`\`\`json).
+3. Cấu trúc JSON bắt buộc:
+{
+  "answer": "Đáp án đúng (chỉ một chữ cái A, B, C, D...)",
+  "explanation": "Giải thích ngắn gọn tại sao đúng"
+}`;
+
+  parts.push({ type: 'text', text: suffix });
+  return parts;
+}
+
 // Request Queue để đảm bảo chỉ gửi 1 request tại một thời điểm
 let requestQueue = Promise.resolve();
 let lastRequestTime = 0;
 
 // Gọi AI API (OpenAI hoặc Gemini) với queue
-async function callAIAPI(settings, prompt) {
+async function callAIAPI(settings, prompt, multimodalParts = null) {
   // Thêm request vào queue để xử lý tuần tự
   return new Promise((resolve, reject) => {
     requestQueue = requestQueue.then(async () => {
@@ -334,13 +461,13 @@ async function callAIAPI(settings, prompt) {
           let result;
           // Chọn API dựa trên provider
           if (settings.provider === 'gemini') {
-            result = await callGeminiAPI(settings, prompt, controller);
+            result = await callGeminiAPI(settings, prompt, controller, multimodalParts);
           } else if (settings.provider === 'anthropic') {
-            result = await callAnthropicAPI(settings, prompt, controller);
+            result = await callAnthropicAPI(settings, prompt, controller, multimodalParts);
           } else if (settings.provider === 'deepseek') {
             result = await callDeepSeekAPI(settings, prompt, controller);
           } else {
-            result = await callOpenAIAPI(settings, prompt, controller);
+            result = await callOpenAIAPI(settings, prompt, controller, multimodalParts);
           }
           clearTimeout(timeoutId);
           resolve(result);
@@ -365,8 +492,21 @@ function sleep(ms) {
 }
 
 // Gọi OpenAI API
-async function callOpenAIAPI(settings, prompt, controller) {
-  console.log("callOpenAIAPI", settings, prompt);
+async function callOpenAIAPI(settings, prompt, controller, multimodalParts = null) {
+  console.log("callOpenAIAPI", { provider: settings.provider, model: settings.model, apiEndpoint: settings.apiEndpoint }, prompt);
+
+  // Xây dựng user message: multimodal nếu có ảnh, text-only nếu không
+  let userContent;
+  if (multimodalParts) {
+    userContent = multimodalParts.map(part => {
+      if (part.type === 'text') return { type: 'text', text: part.text };
+      if (part.type === 'image_url') return { type: 'image_url', image_url: { url: part.url } };
+      return null;
+    }).filter(Boolean);
+  } else {
+    userContent = prompt;
+  }
+
   const response = await fetch(settings.apiEndpoint, {
     method: 'POST',
     headers: {
@@ -382,10 +522,10 @@ async function callOpenAIAPI(settings, prompt, controller) {
         },
         {
           role: 'user',
-          content: prompt
+          content: userContent
         }
       ],
-      response_format: { type: "json_object" }, // Bắt buộc trả về JSON
+      response_format: { type: "json_object" },
       temperature: CONFIG.OPENAI.TEMPERATURE,
       max_tokens: CONFIG.OPENAI.MAX_TOKENS
     }),
@@ -424,11 +564,24 @@ async function callOpenAIAPI(settings, prompt, controller) {
 }
 
 // Gọi Gemini API
-async function callGeminiAPI(settings, prompt, controller) {
-  console.log("callGeminiAPI", settings, prompt);
-  // Gemini API endpoint - SỬ DỤNG v1beta theo official docs
+async function callGeminiAPI(settings, prompt, controller, multimodalParts = null) {
+  console.log("callGeminiAPI", { provider: settings.provider, model: settings.model }, prompt);
   const endpoint = CONFIG.getGeminiEndpoint(settings.model);
-  console.log('Gemini API endpoint:', endpoint, settings.apiKey);
+  console.log('Gemini API endpoint:', endpoint);
+
+  // Xây dựng parts cho Gemini: Gemini không hỗ trợ image_url ngoài trực tiếp,
+  // nên đưa URL ảnh vào text để model biết ngữ cảnh
+  let parts;
+  if (multimodalParts) {
+    parts = multimodalParts.map(part => {
+      if (part.type === 'text') return { text: part.text };
+      if (part.type === 'image_url') return { text: `[Ảnh: ${part.url}]` };
+      return null;
+    }).filter(Boolean);
+  } else {
+    parts = [{ text: `Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Hãy trả lời dưới dạng JSON.\n\n${prompt}` }];
+  }
+
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -436,15 +589,11 @@ async function callGeminiAPI(settings, prompt, controller) {
       'x-goog-api-key': settings.apiKey
     },
     body: JSON.stringify({
-      contents: [{
-        parts: [{
-          text: `Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Hãy trả lời dưới dạng JSON.\n\n${prompt}`
-        }]
-      }],
+      contents: [{ parts }],
       generationConfig: {
         temperature: CONFIG.GEMINI.TEMPERATURE,
         maxOutputTokens: CONFIG.GEMINI.MAX_OUTPUT_TOKENS,
-        responseMimeType: "application/json" // Bắt buộc trả về JSON (chỉ hoạt động với Gemini 1.5 Flash/Pro)
+        responseMimeType: "application/json"
       }
     }),
     signal: controller.signal
@@ -503,8 +652,19 @@ async function callGeminiAPI(settings, prompt, controller) {
 }
 
 // Gọi Anthropic Claude API
-async function callAnthropicAPI(settings, prompt, controller) {
-  console.log("callAnthropicAPI", settings, prompt);
+async function callAnthropicAPI(settings, prompt, controller, multimodalParts = null) {
+  console.log("callAnthropicAPI", { provider: settings.provider, model: settings.model, apiEndpoint: settings.apiEndpoint }, prompt);
+
+  let userContent;
+  if (multimodalParts) {
+    userContent = multimodalParts.map(part => {
+      if (part.type === 'text') return { type: 'text', text: part.text };
+      if (part.type === 'image_url') return { type: 'image', source: { type: 'url', url: part.url } };
+      return null;
+    }).filter(Boolean);
+  } else {
+    userContent = `Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Hãy trả lời dưới dạng JSON.\n\n${prompt}`;
+  }
 
   const response = await fetch(settings.apiEndpoint, {
     method: 'POST',
@@ -520,7 +680,7 @@ async function callAnthropicAPI(settings, prompt, controller) {
       messages: [
         {
           role: 'user',
-          content: `Bạn là một trợ lý AI chuyên giải đáp câu hỏi trắc nghiệm. Hãy trả lời dưới dạng JSON.\n\n${prompt}`
+          content: userContent
         }
       ]
     }),
@@ -580,7 +740,7 @@ async function callAnthropicAPI(settings, prompt, controller) {
 
 // Gọi DeepSeek API
 async function callDeepSeekAPI(settings, prompt, controller) {
-  console.log("callDeepSeekAPI", settings, prompt);
+  console.log("callDeepSeekAPI", { provider: settings.provider, model: settings.model, apiEndpoint: settings.apiEndpoint }, prompt);
 
   const requestBody = {
     model: settings.model,

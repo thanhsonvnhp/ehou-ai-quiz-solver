@@ -133,6 +133,8 @@ extension/
 
 - **Gemini API**: Sử dụng v1beta endpoint
 - **OpenAI API**: Sử dụng Chat Completions endpoint
+- **Backend cache**: Resolve câu hỏi trước khi gọi AI; nếu backend trả về đáp án đúng thì map theo nội dung đáp án và chọn ngay, nếu trả về đáp án sai đã biết thì gọi AI lại với prompt loại trừ các đáp án đó.
+- **Lưu kết quả**: Khi trang E-Learning chấm đúng hoặc sai, extension gửi `answerText` và `isCorrect` cùng câu hỏi, options, explanation, provider/model, deviceId và sourceUrl để backend cập nhật đáp án đúng hoặc danh sách đáp án sai.
 - **Xử lý lỗi**: Xử lý toàn diện cho lỗi quota, authentication, timeout
 
 ### Trích xuất nội dung

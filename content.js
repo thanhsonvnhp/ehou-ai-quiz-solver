@@ -58,6 +58,35 @@ function extractQuestionsFromPage() {
   return questions;
 }
 
+// Lấy tất cả URL ảnh từ một element (loại bỏ icon hệ thống)
+function extractImages(el) {
+  return Array.from(el.querySelectorAll('img'))
+    .map(img => img.src)
+    .filter(src => src && !src.includes('/theme/image.php') && !src.includes('grade_correct') && !src.includes('grade_incorrect'));
+}
+
+// Trích xuất text có nhúng URL ảnh inline: "Câu hỏi... https://...png"
+function extractTextWithImages(el) {
+  const parts = [];
+  const walk = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const t = node.textContent.replace(/\s+/g, ' ');
+      if (t.trim()) parts.push(t);
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.tagName === 'IMG') {
+        const src = node.src || '';
+        if (src && !src.includes('/theme/image.php') && !src.includes('grade_correct') && !src.includes('grade_incorrect')) {
+          parts.push(' ' + src + ' ');
+        }
+      } else {
+        node.childNodes.forEach(walk);
+      }
+    }
+  };
+  walk(el);
+  return parts.join('').replace(/\s+/g, ' ').trim();
+}
+
 // Trích xuất một câu hỏi đơn
 function extractSingleQuestion(questionEl, index) {
   const qnoEl = questionEl.querySelector('.qno');
@@ -66,7 +95,8 @@ function extractSingleQuestion(questionEl, index) {
   const qtextEl = questionEl.querySelector('.qtext');
   if (!qtextEl) return null;
 
-  const questionText = cleanText(qtextEl.innerText || qtextEl.textContent);
+  const questionText = extractTextWithImages(qtextEl);
+  const questionImages = extractImages(qtextEl);
   const answers = [];
   let hasAnswer = false;
   const answerEls = questionEl.querySelectorAll('.answer .r0, .answer .r1');
@@ -76,14 +106,15 @@ function extractSingleQuestion(questionEl, index) {
     const label = answerEl.querySelector('label');
 
     if (radioInput && label) {
-      const answerText = cleanText(label.innerText || label.textContent);
-      const cleanedAnswer = answerText.replace(/^[a-z]\.\s*/i, '');
+      const cleanedAnswer = getLabelTextWithImages(label, answers.length);
+      const answerImages = extractImages(label);
 
       if (radioInput.checked) hasAnswer = true;
 
       answers.push({
         value: radioInput.value,
         text: cleanedAnswer,
+        images: answerImages,
         element: answerEl
       });
     }
@@ -95,6 +126,7 @@ function extractSingleQuestion(questionEl, index) {
     index,
     questionNumber,
     question: questionText,
+    questionImages,
     answers,
     hasAnswer,
     element: questionEl
@@ -103,6 +135,36 @@ function extractSingleQuestion(questionEl, index) {
 
 function cleanText(text) {
   return text.replace(/\s+/g, ' ').replace(/\n+/g, ' ').trim();
+}
+
+// Lấy text của label, fallback cho label chỉ chứa ảnh
+function getLabelText(label, index) {
+  const text = cleanText(label.innerText || label.textContent).replace(/^[a-z]\.\s*/i, '');
+  if (text) return text;
+  // Fallback: dùng alt/title của ảnh, nếu không có thì dùng placeholder
+  const img = label.querySelector('img');
+  if (img) {
+    const alt = (img.alt || img.title || '').trim();
+    return alt || `[image-${index}]`;
+  }
+  return `[option-${index}]`;
+}
+
+// Lấy text của label có nhúng URL ảnh inline
+function getLabelTextWithImages(label, index) {
+  const text = extractTextWithImages(label).replace(/^[a-z]\.\s*/i, '');
+  if (text) return text;
+  return `[option-${index}]`;
+}
+
+function normalizeAnswerText(text) {
+  return cleanText(text || '')
+    .toLowerCase()
+    .replace(/^[a-z]\.?\s*/i, '')
+    .replace(/[​-‍﻿]/g, '')
+    .replace(/[“”"']/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // Highlight đáp án đúng
@@ -131,13 +193,11 @@ function highlightCorrectAnswer(questionIndex, answerLabel, autoCheck = false) {
 
   // Fallback: so khớp text nếu AI trả về nội dung đáp án thay vì chữ cái
   if (!targetAnswer) {
-    const normalizedLabel = answerLabel.trim().toLowerCase();
+    const normalizedLabel = normalizeAnswerText(answerLabel);
     for (const el of answerEls) {
       const label = el.querySelector('label');
       if (!label) continue;
-      const text = cleanText(label.innerText || label.textContent)
-        .replace(/^[a-z]\.\s*/i, '')
-        .toLowerCase();
+      const text = normalizeAnswerText(label.innerText || label.textContent);
       if (text === normalizedLabel || text.includes(normalizedLabel) || normalizedLabel.includes(text)) {
         targetAnswer = el;
         break;
@@ -231,29 +291,52 @@ function extractQuizResultQuestions() {
       const qtextEl = questionEl.querySelector('.qtext');
       if (!qtextEl) return;
 
-      const questionText = cleanText(qtextEl.innerText || qtextEl.textContent);
+      const questionText = extractTextWithImages(qtextEl);
+      const questionImages = extractImages(qtextEl);
       const options = [];
+      const optionImages = [];
       let correctAnswerText = null;
+      let selectedAnswerText = null;
+      let isSelectedCorrect = null;
 
       const answerEls = questionEl.querySelectorAll('.answer .r0, .answer .r1');
+      const questionIsCorrect = questionEl.classList.contains('correct');
+      const questionIsIncorrect = questionEl.classList.contains('incorrect');
+
       answerEls.forEach((answerEl) => {
         const label = answerEl.querySelector('label');
         if (!label) return;
 
-        const answerText = cleanText(label.innerText || label.textContent);
-        const cleaned = answerText.replace(/^[a-z]\.\s*/i, '');
+        const cleaned = getLabelTextWithImages(label, options.length);
         options.push(cleaned);
+        optionImages.push(extractImages(label));
 
-        // Đáp án đúng: có class .correct hoặc img grade_correct
-        const isCorrect =
+        const rowIsCorrect =
           answerEl.classList.contains('correct') ||
           answerEl.querySelector('img[src*="grade_correct"]') !== null ||
           answerEl.querySelector('.fa-check') !== null;
+        const rowIsIncorrect =
+          answerEl.classList.contains('incorrect') ||
+          answerEl.querySelector('img[src*="grade_incorrect"]') !== null;
+        const isSelected =
+          answerEl.querySelector('input[type="radio"]:checked, input[type="checkbox"]:checked') !== null ||
+          rowIsCorrect ||
+          rowIsIncorrect;
 
-        if (isCorrect && !correctAnswerText) {
+        if (rowIsCorrect && !correctAnswerText) {
           correctAnswerText = cleaned;
         }
+
+        if (isSelected && !selectedAnswerText) {
+          selectedAnswerText = cleaned;
+          isSelectedCorrect = rowIsCorrect || (questionIsCorrect && !rowIsIncorrect);
+        }
       });
+
+      if (isSelectedCorrect === null) {
+        if (questionIsCorrect) isSelectedCorrect = true;
+        if (questionIsIncorrect) isSelectedCorrect = false;
+      }
 
       // Fallback: tìm trong .rightanswer
       if (!correctAnswerText) {
@@ -265,17 +348,21 @@ function extractQuizResultQuestions() {
         }
       }
 
-      if (correctAnswerText && options.length > 0) {
-        // Chỉ lưu nếu người dùng trả lời đúng (không có đáp án sai được chọn)
-        const hasIncorrectSelected = Array.from(answerEls).some(el =>
-          el.classList.contains('incorrect') ||
-          el.querySelector('img[src*="grade_incorrect"]') !== null
-        );
-        if (hasIncorrectSelected) return;
+      if (options.length > 0 && selectedAnswerText && isSelectedCorrect !== null) {
         // Ghép explanation từ kết quả AI đã lưu trước đó
         const cached = aiResultsMap[questionText];
         const explanation = cached ? cached.explanation : '';
-        questions.push({ questionText, options, correctAnswerText, explanation });
+        questions.push({
+          questionText,
+          questionImages,
+          options,
+          optionImages,
+          correctAnswerText: isSelectedCorrect ? selectedAnswerText : correctAnswerText,
+          answerText: selectedAnswerText,
+          answerStatus: isSelectedCorrect,
+          wrongAnswerTexts: isSelectedCorrect ? null : [selectedAnswerText],
+          explanation
+        });
       }
     } catch (err) {
       console.warn(`[AI Widget] Lỗi trích xuất câu ${index + 1}:`, err);
@@ -298,7 +385,7 @@ async function saveQuizResults() {
     const questions = extractQuizResultQuestions();
 
     if (questions.length === 0) {
-      updateWidgetStatus('⚠️ Không tìm thấy câu hỏi có đáp án đúng để lưu.', 'warning');
+      updateWidgetStatus('⚠️ Không tìm thấy câu hỏi đã được chấm để lưu.', 'warning');
       saveBtn.disabled = false;
       saveBtn.textContent = '💾 Lưu bài kiểm tra';
       return;
@@ -640,7 +727,8 @@ async function handleWidgetSolve() {
           explanation: result.explanation || '',
           questionText: question.question,
           options: question.answers.map(a => a.text),
-          fromCache: result.fromCache || false
+          fromCache: result.fromCache || false,
+          answerText: result.answerText || result.answer
         });
         persistAIResults();
         highlightCorrectAnswer(i, result.answer, true);

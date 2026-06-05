@@ -67,7 +67,6 @@ function loadSettings() {
     apiEndpointInput.value = items.apiEndpoint || defaults.apiEndpoint;
     modelSelect.value = items.model || defaults.model;
 
-    // Load API key riêng theo provider (không fallback)
     const providerKey = items[`apiKey_${provider}`] || '';
     apiKeyInput.value = providerKey;
 
@@ -122,43 +121,45 @@ function handleSaveSettings() {
 
 function handleProviderChange(skipKeyLoad) {
   const provider = providerSelect.value;
-  const openaiModels = document.getElementById('openaiModels');
-  const geminiModels = document.getElementById('geminiModels');
-  const anthropicModels = document.getElementById('anthropicModels');
-  const deepseekModels = document.getElementById('deepseekModels');
 
-  openaiModels.style.display = 'none';
-  geminiModels.style.display = 'none';
-  anthropicModels.style.display = 'none';
-  deepseekModels.style.display = 'none';
+  const providerModels = {
+    openai: CONFIG.OPENAI.MODELS,
+    gemini: CONFIG.GEMINI.MODELS,
+    anthropic: CONFIG.ANTHROPIC.MODELS,
+    deepseek: CONFIG.DEEPSEEK.MODELS
+  };
+
+  const models = providerModels[provider] || CONFIG.OPENAI.MODELS;
+  modelSelect.innerHTML = '';
+  models.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.value;
+    opt.textContent = m.label;
+    modelSelect.appendChild(opt);
+  });
 
   if (provider === 'gemini') {
-    geminiModels.style.display = 'block';
     modelSelect.value = CONFIG.GEMINI.DEFAULT_MODEL;
     endpointGroup.style.display = 'none';
     apiEndpointInput.value = '';
     apiKeyInput.placeholder = 'AIza...';
   } else if (provider === 'anthropic') {
-    anthropicModels.style.display = 'block';
     modelSelect.value = CONFIG.ANTHROPIC.DEFAULT_MODEL;
     endpointGroup.style.display = 'block';
     apiEndpointInput.value = CONFIG.ANTHROPIC.BASE_URL;
     apiKeyInput.placeholder = 'sk-ant-...';
   } else if (provider === 'deepseek') {
-    deepseekModels.style.display = 'block';
     modelSelect.value = CONFIG.DEEPSEEK.DEFAULT_MODEL;
     endpointGroup.style.display = 'block';
     apiEndpointInput.value = CONFIG.DEEPSEEK.DEFAULT_ENDPOINT;
     apiKeyInput.placeholder = 'sk-...';
   } else {
-    openaiModels.style.display = 'block';
     modelSelect.value = CONFIG.OPENAI.DEFAULT_MODEL;
     endpointGroup.style.display = 'block';
     apiEndpointInput.value = CONFIG.OPENAI.DEFAULT_ENDPOINT;
     apiKeyInput.placeholder = 'sk-proj-...';
   }
 
-  // Load API key đã lưu cho provider được chọn (chỉ skip khi init lần đầu)
   if (skipKeyLoad !== true) {
     chrome.storage.sync.get([`apiKey_${provider}`], (items) => {
       const savedKey = items[`apiKey_${provider}`];

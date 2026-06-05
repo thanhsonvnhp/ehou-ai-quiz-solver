@@ -87,25 +87,25 @@
 
 <body>
     <div class="container">
-        <h1>🔧 Reset Extension Settings</h1>
+        <h1>Reset Extension Settings</h1>
 
         <div class="info">
-            <strong>⚠️ Vấn đề:</strong> Bạn đang dùng model <code>gemini-flash-latest</code> - model này không có quota
+            <strong>Vấn đề:</strong> Bạn đang dùng model <code>gemini-flash-latest</code> - model này không có quota
             miễn phí (limit: 0).
             <br><br>
-            <strong>✅ Giải pháp:</strong> Reset cài đặt về mặc định hoặc đổi sang model <code>gemini-2.5-flash</code>.
+            <strong>Giải pháp:</strong> Reset cài đặt về mặc định hoặc đổi sang model <code>gemini-3.1-flash-lite</code>.
         </div>
 
         <h3>Option 1: Reset toàn bộ cài đặt</h3>
         <p>Xóa tất cả cài đặt đã lưu và reset về mặc định (OpenAI).</p>
-        <button class="btn btn-danger" onclick="resetAllSettings()">🗑️ Reset tất cả</button>
+        <button class="btn btn-danger" onclick="resetAllSettings()">Reset tất cả</button>
 
         <h3 style="margin-top: 30px;">Option 2: Chỉ đổi model Gemini</h3>
-        <p>Giữ nguyên API key, chỉ đổi model sang <code>gemini-2.5-flash</code>.</p>
-        <button class="btn" onclick="fixGeminiModel()">🔄 Đổi sang Gemini 1.5 Flash</button>
+        <p>Giữ nguyên API key, chỉ đổi model sang <code>gemini-3.1-flash-lite</code>.</p>
+        <button class="btn" onclick="fixGeminiModel()">Đổi sang Gemini 1.5 Flash</button>
 
         <h3 style="margin-top: 30px;">Option 3: Xem cài đặt hiện tại</h3>
-        <button class="btn" onclick="viewCurrentSettings()">👁️ Xem cài đặt</button>
+        <button class="btn" onclick="viewCurrentSettings()">Xem cài đặt</button>
 
         <div id="status" class="status"></div>
     </div>
@@ -113,12 +113,12 @@
     <script>
         // Reset tất cả cài đặt
         function resetAllSettings() {
-            if (!confirm('⚠️ Bạn có chắc muốn xóa TẤT CẢ cài đặt? API key cũng sẽ bị xóa!')) {
+            if (!confirm('Bạn có chắc muốn xóa TẤT CẢ cài đặt? API key cũng sẽ bị xóa!')) {
                 return;
             }
 
             chrome.storage.sync.clear(() => {
-                showStatus('✅ Đã reset tất cả cài đặt! Vui lòng cấu hình lại API key.', 'success');
+                showStatus('[OK] Đã reset tất cả cài đặt! Vui lòng cấu hình lại API key.', 'success');
                 setTimeout(() => {
                     chrome.runtime.openOptionsPage();
                 }, 2000);
@@ -129,14 +129,14 @@
         function fixGeminiModel() {
             chrome.storage.sync.get(['apiKey', 'provider'], (items) => {
                 if (items.provider !== 'gemini') {
-                    showStatus('⚠️ Bạn đang dùng ' + (items.provider || 'openai') + ', không phải Gemini. Không cần fix.', 'error');
+                    showStatus('[WARN] Bạn đang dùng ' + (items.provider || 'openai') + ', không phải Gemini. Không cần fix.', 'error');
                     return;
                 }
 
                 chrome.storage.sync.set({
-                    model: 'gemini-2.5-flash'
+                    model: 'gemini-3.1-flash-lite'
                 }, () => {
-                    showStatus('✅ Đã đổi model sang gemini-2.5-flash! Vui lòng thử lại.', 'success');
+                    showStatus('[OK] Đã đổi model sang gemini-3.1-flash-lite! Vui lòng thử lại.', 'success');
                 });
             });
         }
@@ -157,9 +157,17 @@
         }
 
         // Hiển thị status
+        const STATUS_ICONS = {
+            OK: '<svg style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:5px" viewBox="0 0 16 16"><path d="M6.2 11.4 2.8 8l1.1-1.1 2.3 2.3 5.9-5.9 1.1 1.1z"/></svg>',
+            ERR: '<svg style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:5px" viewBox="0 0 16 16"><path d="M4.3 3.2 8 6.9l3.7-3.7 1.1 1.1L9.1 8l3.7 3.7-1.1 1.1L8 9.1l-3.7 3.7-1.1-1.1L6.9 8 3.2 4.3z"/></svg>',
+            WARN: '<svg style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:5px" viewBox="0 0 16 16"><path d="M8 2 1.5 13h13zM7.2 6h1.6v3.8H7.2zm0 5h1.6v1.5H7.2z"/></svg>'
+        };
         function showStatus(message, type) {
             const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = message;
+            const prefix = message.match(/^\[(\w+)\]/)?.[1];
+            const icon = (prefix && STATUS_ICONS[prefix]) ? STATUS_ICONS[prefix] : '';
+            const text = message.replace(/^\[\w+\]\s*/, '');
+            statusDiv.innerHTML = icon + text;
             statusDiv.className = 'status ' + type;
         }
 
@@ -167,7 +175,7 @@
         window.onload = function () {
             chrome.storage.sync.get(['model', 'provider'], (items) => {
                 if (items.provider === 'gemini' && items.model === 'gemini-flash-latest') {
-                    showStatus('⚠️ Phát hiện model gemini-flash-latest! Hãy click "Đổi sang Gemini 1.5 Flash" để fix.', 'error');
+                    showStatus('[WARN] Phát hiện model gemini-flash-latest! Hãy click "Đổi sang Gemini 1.5 Flash" để fix.', 'error');
                 }
             });
         };

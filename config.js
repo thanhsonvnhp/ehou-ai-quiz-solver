@@ -24,9 +24,7 @@ const CONFIG = {
     DEFAULT_MODEL: 'gemini-3.5-flash',
     MODELS: [
       { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash (Khuyên dùng - Mới nhất, Free)' },
-      { value: 'gemini-3.1-flash', label: 'Gemini 3.1 Flash (Ổn định)' },
-      { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite (Nhanh & Rẻ nhất)' },
-      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Cũ - deprecated 17/6/2026)' }
+      { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite (Nhanh & Rẻ nhất)' }
     ],
     API_KEY_PREFIX: 'AIza',
     TEMPERATURE: 0.3,
@@ -81,8 +79,8 @@ const CONFIG = {
   // UI Messages
   MESSAGES: {
     NO_API_KEY: 'Chưa cấu hình API Key. Vui lòng cấu hình trong popup.',
-    SAVE_SUCCESS: '✓ Đã lưu cấu hình thành công!',
-    SAVE_ERROR: '❌ Lỗi khi lưu cấu hình. Vui lòng thử lại.',
+    SAVE_SUCCESS: 'Đã lưu cấu hình thành công!',
+    SAVE_ERROR: 'Lỗi khi lưu cấu hình. Vui lòng thử lại.',
     TIMEOUT_ERROR: 'Timeout: AI không phản hồi trong 30 giây',
     NO_QUESTIONS: 'Không tìm thấy câu hỏi nào trên trang này',
     INVALID_RESPONSE: 'AI không trả về kết quả hợp lệ',
@@ -91,17 +89,17 @@ const CONFIG = {
     OPENAI_ERROR: 'OpenAI API Error',
 
     // Gemini errors
-    GEMINI_QUOTA_ERROR: `❌ Lỗi Quota Gemini API:\n\nBạn đã vượt quá giới hạn miễn phí của Gemini API.\n\n💡 Giải pháp:\n1. Đợi một lúc rồi thử lại (quota reset hàng ngày)\n2. Kiểm tra quota tại: https://ai.dev/rate-limit\n3. Nâng cấp lên gói trả phí tại: https://aistudio.google.com/\n4. Hoặc chuyển sang dùng OpenAI (ChatGPT) trong cài đặt`,
+    GEMINI_QUOTA_ERROR: `Lỗi Quota Gemini API:\n\nBạn đã vượt quá giới hạn miễn phí của Gemini API.\n\nGiải pháp:\n1. Đợi một lúc rồi thử lại (quota reset hàng ngày)\n2. Kiểm tra quota tại: https://ai.dev/rate-limit\n3. Nâng cấp lên gói trả phí tại: https://aistudio.google.com/\n4. Hoặc chuyển sang dùng OpenAI (ChatGPT) trong cài đặt`,
 
-    GEMINI_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://aistudio.google.com/app/apikey\n3. Đảm bảo API Key bắt đầu bằng "AIza..."`,
+    GEMINI_AUTH_ERROR: `Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\nGiải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://aistudio.google.com/app/apikey\n3. Đảm bảo API Key bắt đầu bằng "AIza..."`,
 
     // Anthropic errors
     ANTHROPIC_ERROR: 'Anthropic API Error',
-    ANTHROPIC_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`,
+    ANTHROPIC_AUTH_ERROR: `Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\nGiải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`,
 
     // DeepSeek errors
     DEEPSEEK_ERROR: 'DeepSeek API Error',
-    DEEPSEEK_AUTH_ERROR: `❌ Lỗi xác thực DeepSeek API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://platform.deepseek.com/api_keys\n3. Đảm bảo API Key bắt đầu bằng "sk-..."`
+    DEEPSEEK_AUTH_ERROR: `Lỗi xác thực DeepSeek API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\nGiải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://platform.deepseek.com/api_keys\n3. Đảm bảo API Key bắt đầu bằng "sk-..."`
   },
 
   // Backend API Configuration

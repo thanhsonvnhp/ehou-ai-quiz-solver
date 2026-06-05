@@ -134,30 +134,39 @@
       font-size: 12px;
       margin-top: 15px;
       display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ext-status-icon {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      fill: currentColor;
     }
 
     .status.info {
       background: #e3f2fd;
       color: #1976d2;
-      display: block;
+      display: flex;
     }
 
     .status.success {
       background: #e8f5e9;
       color: #388e3c;
-      display: block;
+      display: flex;
     }
 
     .status.error {
       background: #ffebee;
       color: #d32f2f;
-      display: block;
+      display: flex;
     }
 
     .status.warning {
       background: #fff3e0;
       color: #f57c00;
-      display: block;
+      display: flex;
     }
 
     .results {
@@ -280,12 +289,12 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>🤖 Trợ Lý Học Tập HOU E-Learning AI</h1>
+      <h1>Trợ Lý Học Tập HOU E-Learning AI</h1>
       <p>Cấu hình API - Widget hiển thị trên trang làm bài</p>
     </div>
     <div class="main-content">
       <div class="section">
-        <div class="section-title">⚙️ Cấu hình API</div>
+        <div class="section-title">Cấu hình API</div>
         <div class="input-group">
           <label>AI Provider</label>
           <select id="provider">
@@ -321,17 +330,20 @@
             </optgroup>
           </select>
         </div>
-        <button class="btn btn-primary" id="saveSettings">💾 Lưu cấu hình</button>
+        <button class="btn btn-primary" id="saveSettings">
+          <svg class="ext-status-icon" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M2.5 2.5h9.2L13.5 4v11h-11zM4 4v4h7V4zm1 10h6v-3H5z"/></svg>
+          Lưu cấu hình
+        </button>
         <div id="status" class="status"></div>
       </div>
 
       <div class="section" style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #667eea;">
         <div style="font-size: 13px; color: #1976d2; line-height: 1.6;">
-          <strong>💡 Hướng dẫn sử dụng:</strong><br>
+          <strong>Hướng dẫn sử dụng:</strong><br>
           1. Cấu hình API Key ở trên<br>
           2. Vào trang làm bài trên <strong>learning.ehou.edu.vn</strong><br>
           3. Widget AI sẽ tự động hiển thị góc phải màn hình<br>
-          4. Click <strong>"🚀 Giải bằng AI"</strong> trong widget để bắt đầu<br>
+          4. Click <strong>"Giải bằng AI"</strong> trong widget để bắt đầu<br>
         </div>
       </div>
     </div>

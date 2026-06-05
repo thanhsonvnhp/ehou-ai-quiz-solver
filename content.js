@@ -225,7 +225,7 @@ function addAISuggestionBadge(answerEl) {
   if (answerEl.querySelector('.ai-suggestion-badge')) return;
   const badge = document.createElement('span');
   badge.className = 'ai-suggestion-badge';
-  badge.textContent = '✓ AI Suggested';
+  badge.innerHTML = `${extIcon('ok')} AI Suggested`;
   answerEl.appendChild(badge);
 }
 
@@ -259,7 +259,11 @@ function loadPersistedAIResults() {
     const map = {};
     for (const r of results) {
       if (r.questionText) {
-        map[r.questionText] = { explanation: r.explanation || '', answer: r.answer || '' };
+        map[r.questionText] = {
+          explanation: r.explanation || '',
+          answer: r.answer || '',
+          answerText: r.answerText || ''
+        };
       }
     }
     return map;
@@ -342,22 +346,29 @@ function extractQuizResultQuestions() {
       if (!correctAnswerText) {
         const rightAnswerEl = questionEl.querySelector('.rightanswer');
         if (rightAnswerEl) {
-          const rightText = cleanText(rightAnswerEl.innerText || rightAnswerEl.textContent);
-          const match = rightText.match(/:\s*(.+)$/);
+          const rightText = extractTextWithImages(rightAnswerEl);
+          const match = rightText.match(/:\s*(.+)$/s);
           if (match) correctAnswerText = match[1].replace(/^[a-z]\.\s*/i, '').trim();
         }
       }
 
       if (options.length > 0 && selectedAnswerText && isSelectedCorrect !== null) {
-        // Ghép explanation từ kết quả AI đã lưu trước đó
+        // Ghép explanation và correctAnswerText từ kết quả AI đã lưu trước đó
         const cached = aiResultsMap[questionText];
         const explanation = cached ? cached.explanation : '';
+
+        // Nếu không xác định được đáp án đúng từ DOM (Moodle không hiển thị khi câu sai),
+        // dùng answerText từ AI cache
+        if (!correctAnswerText && cached && cached.answerText) {
+          correctAnswerText = cached.answerText;
+        }
+
         questions.push({
           questionText,
           questionImages,
           options,
           optionImages,
-          correctAnswerText: isSelectedCorrect ? selectedAnswerText : correctAnswerText,
+          correctAnswerText: isSelectedCorrect ? selectedAnswerText : (correctAnswerText || ''),
           answerText: selectedAnswerText,
           answerStatus: isSelectedCorrect,
           wrongAnswerTexts: isSelectedCorrect ? null : [selectedAnswerText],
@@ -378,16 +389,16 @@ async function saveQuizResults() {
   if (!saveBtn) return;
 
   saveBtn.disabled = true;
-  saveBtn.textContent = '⏳ Đang lưu...';
-  updateWidgetStatus('💾 Đang lưu bài kiểm tra vào database...', 'info');
+  saveBtn.innerHTML = `${extIcon('wait')} Đang lưu...`;
+  updateWidgetStatus('[SAVE] Đang lưu bài kiểm tra vào database...', 'info');
 
   try {
     const questions = extractQuizResultQuestions();
 
     if (questions.length === 0) {
-      updateWidgetStatus('⚠️ Không tìm thấy câu hỏi đã được chấm để lưu.', 'warning');
+      updateWidgetStatus('[WARN] Không tìm thấy câu hỏi đã được chấm để lưu.', 'warning');
       saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Lưu bài kiểm tra';
+      saveBtn.innerHTML = `${extIcon('save')} Lưu bài kiểm tra`;
       return;
     }
 
@@ -409,14 +420,14 @@ async function saveQuizResults() {
     });
 
     updateWidgetStatus(
-      `✅ Đã lưu ${response.savedCount}/${response.total} câu hỏi vào database!`,
+      `[OK] Đã lưu ${response.savedCount}/${response.total} câu hỏi vào database!`,
       'success'
     );
-    saveBtn.textContent = `✅ Đã lưu (${response.savedCount}/${response.total})`;
+    saveBtn.innerHTML = `${extIcon('ok')} Đã lưu (${response.savedCount}/${response.total})`;
   } catch (err) {
-    updateWidgetStatus(`❌ Lỗi khi lưu: ${err.message}`, 'error');
+    updateWidgetStatus(`[ERR] Lỗi khi lưu: ${err.message}`, 'error');
     saveBtn.disabled = false;
-    saveBtn.textContent = '💾 Lưu bài kiểm tra';
+    saveBtn.innerHTML = `${extIcon('save')} Lưu bài kiểm tra`;
   }
 }
 
@@ -538,6 +549,25 @@ function extractUserInfo() {
   }
 }
 
+function extIcon(name) {
+  const icons = {
+    ai: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 13 4v8l-5 2.5L3 12V4zM4.5 4.9v6.2L8 12.8l3.5-1.7V4.9L8 3.2z"/><path d="M6 6h1.5v1.5H6zm2.5 0H10v1.5H8.5zM6 9h4v1.2H6z"/></svg>',
+    user: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m0 1.5c-3 0-5.5 1.6-5.5 3.6V14h11v-.9c0-2-2.5-3.6-5.5-3.6"/></svg>',
+    run: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5 13 8l-9 5.5z"/></svg>',
+    stop: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4h8v8H4z"/></svg>',
+    delete: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 2h5l.6 1.2H14v1.4H2V3.2h2.9zM3.5 5.5h9L12 14H4z"/></svg>',
+    save: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2.5h9.2L13.5 4v11h-11zM4 4v4h7V4zm1 10h6v-3H5z"/></svg>',
+    ok: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 11.4 2.8 8l1.1-1.1 2.3 2.3 5.9-5.9 1.1 1.1z"/></svg>',
+    error: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 3.2 8 6.9l3.7-3.7 1.1 1.1L9.1 8l3.7 3.7-1.1 1.1L8 9.1l-3.7 3.7-1.1-1.1L6.9 8 3.2 4.3z"/></svg>',
+    warning: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2 1.5 13h13zM7.2 6h1.6v3.8H7.2zm0 5h1.6v1.5H7.2z"/></svg>',
+    info: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.2 6.5h1.6V13H7.2zM7.2 3h1.6v1.6H7.2z"/></svg>',
+    read: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h5.5L12 5.5V14H3zm5 1.5V6h2.5L8 3.5zM4.5 8h7V6.8h-7zm0 2.2h7V9h-7z"/></svg>',
+    wait: '<svg class="ext-icon ai-widget-spinner-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2m0 1.5a4.5 4.5 0 0 1 0 9V3.5z" opacity=".3"/><path d="M8 3.5V2a6 6 0 0 1 6 6h-1.5A4.5 4.5 0 0 0 8 3.5"/></svg>',
+    skip: '<svg class="ext-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5 8 8l-5 4.5zm5.5 0L13 8l-4.5 4.5z"/></svg>'
+  };
+  return icons[name] || icons.info;
+}
+
 function createWidget() {
   if (document.getElementById('ai-quiz-widget')) return;
 
@@ -549,13 +579,13 @@ function createWidget() {
   widget.className = '';
   widget.innerHTML = `
     <div class="ai-widget-collapsed-view" id="ai-widget-collapsed" style="display:none;">
-      <div class="ai-widget-icon">🤖</div>
+      <div class="ai-widget-icon">${extIcon('ai')}</div>
       <div class="ai-widget-greeting">Tôi là trợ lý AI<br>hãy để tôi giúp bạn</div>
     </div>
     <div class="ai-widget-expanded-view">
       <div class="ai-widget-header" id="ai-widget-header">
         <div class="ai-widget-title">
-          <span>🤖</span>
+          <span>${extIcon('ai')}</span>
           <span class="ai-widget-title-text">Trợ Lý AI</span>
         </div>
         <div class="ai-widget-controls">
@@ -563,7 +593,7 @@ function createWidget() {
         </div>
       </div>
       <div class="ai-widget-user-info" id="ai-widget-user-info">
-        <span class="ai-widget-user-icon">👤</span>
+        <span class="ai-widget-user-icon">${extIcon('user')}</span>
         <span class="ai-widget-user-name" id="ai-widget-user-name">${displayName}</span>
       </div>
       <div class="ai-widget-body">
@@ -580,10 +610,10 @@ function createWidget() {
         </div>
         <div class="ai-widget-results" id="ai-widget-results"></div>
         <div class="ai-widget-actions">
-          <button class="ai-widget-action-btn primary" id="ai-widget-solve">🚀 Giải bằng AI</button>
-          <button class="ai-widget-action-btn danger" id="ai-widget-stop" style="display:none;">⛔ Dừng lại</button>
-          <button class="ai-widget-action-btn secondary" id="ai-widget-clear">🗑️ Xóa kết quả</button>
-          <button class="ai-widget-action-btn save-quiz" id="ai-widget-save-quiz" style="display:none;">💾 Lưu bài kiểm tra</button>
+          <button class="ai-widget-action-btn primary" id="ai-widget-solve">${extIcon('run')} Giải bằng AI</button>
+          <button class="ai-widget-action-btn danger" id="ai-widget-stop" style="display:none;">${extIcon('stop')} Dừng lại</button>
+          <button class="ai-widget-action-btn secondary" id="ai-widget-clear">${extIcon('delete')} Xóa kết quả</button>
+          <button class="ai-widget-action-btn save-quiz" id="ai-widget-save-quiz" style="display:none;">${extIcon('save')} Lưu bài kiểm tra</button>
         </div>
       </div>
     </div>
@@ -628,7 +658,7 @@ function bindWidgetEvents() {
   if (isQuizResultPage()) {
     saveQuizBtn.style.display = 'block';
     solveBtn.style.display = 'none';
-    updateWidgetStatus('📋 Trang kết quả - Nhấn "Lưu bài kiểm tra"', 'info');
+    updateWidgetStatus('[CLIP] Trang kết quả - Nhấn "Lưu bài kiểm tra"', 'info');
   }
 }
 
@@ -679,7 +709,7 @@ async function handleWidgetSolve() {
     stopBtn.style.display = 'block';
     clearBtn.disabled = true;
 
-    updateWidgetStatus('📖 Đang đọc câu hỏi từ trang...', 'info');
+    updateWidgetStatus('[READ] Đang đọc câu hỏi từ trang...', 'info');
     document.getElementById('ai-widget-results').innerHTML = '';
     widgetState.results = [];
 
@@ -692,14 +722,14 @@ async function handleWidgetSolve() {
     const toSolve = questions.length - skippedCount;
 
     if (skippedCount > 0) {
-      updateWidgetStatus(`✓ Tìm thấy ${questions.length} câu (${skippedCount} đã có đáp án). Đang giải ${toSolve} câu...`, 'info');
+      updateWidgetStatus(`[OK] Tìm thấy ${questions.length} câu (${skippedCount} đã có đáp án). Đang giải ${toSolve} câu...`, 'info');
     } else {
-      updateWidgetStatus(`✓ Tìm thấy ${questions.length} câu. Đang gửi cho AI...`, 'info');
+      updateWidgetStatus(`[OK] Tìm thấy ${questions.length} câu. Đang gửi cho AI...`, 'info');
     }
 
     for (let i = 0; i < questions.length; i++) {
       if (!widgetState.isSolving) {
-        updateWidgetStatus(`⛔ Đã dừng! Đã giải ${widgetState.results.length}/${questions.length} câu.`, 'warning');
+        updateWidgetStatus(`[STOP] Đã dừng! Đã giải ${widgetState.results.length}/${questions.length} câu.`, 'warning');
         break;
       }
 
@@ -710,13 +740,13 @@ async function handleWidgetSolve() {
         continue;
       }
 
-      updateWidgetStatus(`🤖 Đang giải câu ${i + 1}/${questions.length}...`, 'info');
+      updateWidgetStatus(`[AI] Đang giải câu ${i + 1}/${questions.length}...`, 'info');
 
       try {
         const result = await solveQuestionWithAIWidget(question);
 
         if (!widgetState.isSolving) {
-          updateWidgetStatus(`⛔ Đã dừng! Đã giải ${widgetState.results.length}/${questions.length} câu.`, 'warning');
+          updateWidgetStatus(`[STOP] Đã dừng! Đã giải ${widgetState.results.length}/${questions.length} câu.`, 'warning');
           break;
         }
 
@@ -737,7 +767,7 @@ async function handleWidgetSolve() {
 
       } catch (error) {
         if (error.message === 'Request đã bị hủy') {
-          updateWidgetStatus(`⛔ Đã dừng! Đã giải ${widgetState.results.length}/${questions.length} câu.`, 'warning');
+          updateWidgetStatus(`[STOP] Đã dừng! Đã giải ${widgetState.results.length}/${questions.length} câu.`, 'warning');
           break;
         }
         displayWidgetError(question, error.message);
@@ -745,16 +775,16 @@ async function handleWidgetSolve() {
     }
 
     if (widgetState.isSolving) {
-      updateWidgetStatus(`✅ Hoàn thành! Đã giải ${widgetState.results.length}/${questions.length} câu.`, 'success');
+      updateWidgetStatus(`[OK] Hoàn thành! Đã giải ${widgetState.results.length}/${questions.length} câu.`, 'success');
     }
 
   } catch (error) {
-    updateWidgetStatus(`❌ Lỗi: ${error.message}`, 'error');
+    updateWidgetStatus(`[ERR] Lỗi: ${error.message}`, 'error');
   } finally {
     widgetState.isSolving = false;
     widgetState.currentAbortController = null;
     solveBtn.disabled = false;
-    solveBtn.innerHTML = '🚀 Giải bằng AI';
+    solveBtn.innerHTML = `${extIcon('run')} Giải bằng AI`;
     stopBtn.style.display = 'none';
     clearBtn.disabled = false;
   }
@@ -768,7 +798,7 @@ function handleWidgetStop() {
   }
   const stopBtn = document.getElementById('ai-widget-stop');
   if (stopBtn) stopBtn.disabled = true;
-  updateWidgetStatus('⏳ Đang dừng lại...', 'warning');
+  updateWidgetStatus('[WAIT] Đang dừng lại...', 'warning');
 }
 
 function handleWidgetClear() {
@@ -777,7 +807,7 @@ function handleWidgetClear() {
   widgetState.results = [];
   document.getElementById('ai-widget-stats').style.display = 'none';
   document.getElementById('ai-widget-solved').textContent = '0';
-  updateWidgetStatus('✓ Đã xóa tất cả kết quả', 'success');
+  updateWidgetStatus('[OK] Đã xóa tất cả kết quả', 'success');
   setTimeout(() => updateWidgetStatus('Sẵn sàng giải đề', 'info'), 2000);
 }
 
@@ -803,9 +833,38 @@ function solveQuestionWithAIWidget(question) {
   });
 }
 
+function statusIconFor(message, type) {
+  const prefix = message.match(/^\[(\w+)\]/)?.[1];
+  const icons = {
+    OK: 'ok',
+    ERR: 'error',
+    WARN: 'warning',
+    SAVE: 'save',
+    RUN: 'run',
+    STOP: 'stop',
+    WAIT: 'wait',
+    READ: 'read',
+    SKIP: 'skip',
+    AI: 'ai',
+    CLIP: 'info'
+  };
+  if (prefix && icons[prefix]) return extIcon(icons[prefix]);
+  if (type === 'success') return extIcon('ok');
+  if (type === 'error') return extIcon('error');
+  if (type === 'warning') return extIcon('warning');
+  return extIcon('info');
+}
+
+function stripWidgetPrefix(message) {
+  return message.replace(/^\[(OK|ERR|WARN|SAVE|RUN|STOP|DEL|USR|WAIT|CLIP|SKIP|READ|TIP|AI)\]\s*/, '');
+}
+
 function updateWidgetStatus(message, type) {
   const el = document.getElementById('ai-widget-status');
-  if (el) { el.textContent = message; el.className = `ai-widget-status ${type}`; }
+  if (el) {
+    el.innerHTML = `${statusIconFor(message, type)}<span>${stripWidgetPrefix(message)}</span>`;
+    el.className = `ai-widget-status ${type}`;
+  }
 }
 
 function displayWidgetResult(question, result) {
@@ -830,7 +889,7 @@ function displayWidgetSkipped(question) {
   el.className = 'ai-widget-result-item skipped';
   el.innerHTML = `
     <div class="ai-widget-result-number">Câu ${question.questionNumber}</div>
-    <div class="ai-widget-result-answer">⏭️ Đã bỏ qua: Câu này đã có đáp án</div>
+    <div class="ai-widget-result-answer">${extIcon('skip')} Đã bỏ qua: Câu này đã có đáp án</div>
   `;
   resultsEl.appendChild(el);
 }
@@ -847,7 +906,7 @@ function displayWidgetError(question, errorMessage) {
   const ansEl = document.createElement('div');
   ansEl.className = 'ai-widget-result-answer';
   ansEl.style.cssText = 'background:#ffebee;color:#d32f2f;';
-  ansEl.textContent = `❌ Lỗi: ${errorMessage}`;
+  ansEl.innerHTML = `${extIcon('error')} Lỗi: ${errorMessage}`;
 
   el.appendChild(numEl);
   el.appendChild(ansEl);

@@ -15,7 +15,7 @@
 
         if (typeof CONFIG !== 'undefined') {
             output.innerHTML = `
-        <h2>✅ CONFIG loaded successfully!</h2>
+        <h2><svg style="width:18px;height:18px;fill:#388e3c;vertical-align:middle" viewBox="0 0 16 16"><path d="M6.2 11.4 2.8 8l1.1-1.1 2.3 2.3 5.9-5.9 1.1 1.1z"/></svg> CONFIG loaded successfully!</h2>
         <pre>${JSON.stringify(CONFIG, null, 2)}</pre>
         
         <h3>Test getDefaultSettings:</h3>
@@ -23,10 +23,10 @@
         <p>OpenAI: <code>${JSON.stringify(CONFIG.getDefaultSettings('openai'), null, 2)}</code></p>
         
         <h3>Test getGeminiEndpoint:</h3>
-        <p>gemini-2.5-flash: <code>${CONFIG.getGeminiEndpoint('gemini-2.5-flash')}</code></p>
+        <p>gemini-3.1-flash-lite: <code>${CONFIG.getGeminiEndpoint('gemini-3.1-flash-lite')}</code></p>
       `;
         } else {
-            output.innerHTML = '<h2>❌ CONFIG not loaded!</h2>';
+            output.innerHTML = '<h2><svg style="width:18px;height:18px;fill:#d32f2f;vertical-align:middle" viewBox="0 0 16 16"><path d="M4.3 3.2 8 6.9l3.7-3.7 1.1 1.1L9.1 8l3.7 3.7-1.1 1.1L8 9.1l-3.7 3.7-1.1-1.1L6.9 8 3.2 4.3z"/></svg> CONFIG not loaded!</h2>';
         }
     </script>
 </body>

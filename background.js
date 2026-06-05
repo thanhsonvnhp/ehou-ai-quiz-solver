@@ -48,10 +48,10 @@ const CONFIG = {
     OPENAI_ERROR: 'OpenAI API Error',
     ANTHROPIC_ERROR: 'Anthropic API Error',
     DEEPSEEK_ERROR: 'DeepSeek API Error',
-    GEMINI_QUOTA_ERROR: `❌ Lỗi Quota Gemini API:\n\nBạn đã vượt quá giới hạn miễn phí của Gemini API https://aistudio.google.com/usage.\n\n💡 Giải pháp:\n1. Đợi một lúc rồi thử lại (quota reset hàng ngày)\n2. Kiểm tra quota tại: https://aistudio.google.com/usage\n3. Nâng cấp lên gói trả phí tại: https://aistudio.google.com/usage\n4. Hoặc chuyển sang dùng OpenAI (ChatGPT) trong cài đặt`,
-    GEMINI_AUTH_ERROR: `❌ Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://aistudio.google.com/app/apikey\n3. Đảm bảo API Key bắt đầu bằng "AIza..."`,
-    ANTHROPIC_AUTH_ERROR: `❌ Lỗi xác thực Anthropic API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`,
-    DEEPSEEK_AUTH_ERROR: `❌ Lỗi xác thực DeepSeek API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\n💡 Giải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://platform.deepseek.com/api_keys\n3. Đảm bảo API Key bắt đầu bằng "sk-..."`
+    GEMINI_QUOTA_ERROR: `Lỗi Quota Gemini API:\n\nBạn đã vượt quá giới hạn miễn phí của Gemini API https://aistudio.google.com/usage.\n\nGiải pháp:\n1. Đợi một lúc rồi thử lại (quota reset hàng ngày)\n2. Kiểm tra quota tại: https://aistudio.google.com/usage\n3. Nâng cấp lên gói trả phí tại: https://aistudio.google.com/usage\n4. Hoặc chuyển sang dùng OpenAI (ChatGPT) trong cài đặt`,
+    GEMINI_AUTH_ERROR: `Lỗi xác thực API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\nGiải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://aistudio.google.com/app/apikey\n3. Đảm bảo API Key bắt đầu bằng "AIza..."`,
+    ANTHROPIC_AUTH_ERROR: `Lỗi xác thực Anthropic API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\nGiải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://console.anthropic.com/\n3. Đảm bảo API Key bắt đầu bằng "sk-ant-..."`,
+    DEEPSEEK_AUTH_ERROR: `Lỗi xác thực DeepSeek API:\n\nAPI Key không hợp lệ hoặc không có quyền truy cập.\n\nGiải pháp:\n1. Kiểm tra lại API Key trong cài đặt\n2. Tạo API Key mới tại: https://platform.deepseek.com/api_keys\n3. Đảm bảo API Key bắt đầu bằng "sk-..."`
   }
 };
 
@@ -114,13 +114,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'saveSettings') {
-    console.log('📝 Background: Saving settings...', request.settings);
+    console.log('Background: Saving settings...', request.settings);
     chrome.storage.sync.set(request.settings, () => {
       if (chrome.runtime.lastError) {
-        console.error('❌ Background: Error saving settings:', chrome.runtime.lastError);
+        console.error('Background: Error saving settings:', chrome.runtime.lastError);
         sendResponse({ success: false, error: chrome.runtime.lastError.message });
       } else {
-        console.log('✅ Background: Settings saved successfully');
+        console.log('Background: Settings saved successfully');
         sendResponse({ success: true });
       }
     });
@@ -150,7 +150,7 @@ async function handleSolveWithAI(questionData) {
   try {
     const cached = await resolveFromCache(questionData);
     if (cached && cached.found && cached.answerStatus === true && cached.correctAnswerText) {
-      console.log('✅ Cache correct answer hit:', cached.correctAnswerText);
+      console.log('Cache correct answer hit:', cached.correctAnswerText);
       return {
         answer: cached.correctAnswerText,
         answerText: cached.correctAnswerText,
@@ -161,11 +161,11 @@ async function handleSolveWithAI(questionData) {
 
     if (cached && cached.found && cached.answerStatus === false) {
       wrongAnswerTexts = Array.isArray(cached.wrongAnswerTexts) ? cached.wrongAnswerTexts : [];
-      console.log('⚠️ Known wrong answers hit:', wrongAnswerTexts);
+      console.log('Known wrong answers hit:', wrongAnswerTexts);
     }
   } catch (cacheError) {
     // Nếu backend không khả dụng thì bỏ qua, tiếp tục dùng AI
-    console.warn('⚠️ Không thể kết nối backend cache, dùng AI:', cacheError.message);
+    console.warn('Không thể kết nối backend cache, dùng AI:', cacheError.message);
   }
 
   // Bước 2: Lấy cấu hình API từ storage
@@ -191,7 +191,7 @@ async function handleSolveWithAI(questionData) {
   const prompt = createPrompt(questionData, wrongAnswerTexts);
   const multimodalParts = buildMultimodalContent(questionData, wrongAnswerTexts);
   if (wrongAnswerTexts.length > 0) {
-    console.log('🔁 AI retry with excluded answers:', wrongAnswerTexts);
+    console.log('AI retry with excluded answers:', wrongAnswerTexts);
   }
 
   // Gọi AI API
@@ -263,9 +263,9 @@ async function handleSaveQuizResults(quizData) {
       };
 
       if (item.answerStatus === true) {
-        console.log('💾 Save correct answer:', item.answerText);
+        console.log('Save correct answer:', item.answerText);
       } else {
-        console.log('💾 Save wrong answer:', item.answerText, '| wrongAnswerTexts:', body.wrongAnswerTexts);
+        console.log('Save wrong answer:', item.answerText, '| wrongAnswerTexts:', body.wrongAnswerTexts);
       }
 
       const response = await fetch(url, {
@@ -276,7 +276,7 @@ async function handleSaveQuizResults(quizData) {
 
       const data = await response.json();
       if (!response.ok || !data.success) {
-        console.warn('⚠️ Save failed:', item.questionText, '| status:', response.status, '| resp:', JSON.stringify(data));
+        console.warn('Save failed:', item.questionText, '| status:', response.status, '| resp:', JSON.stringify(data));
       }
       results.push({ success: response.ok && data.success, questionText: item.questionText });
     } catch (err) {
@@ -538,25 +538,25 @@ async function callOpenAIAPI(settings, prompt, controller, multimodalParts = nul
   }
 
   const data = await response.json();
-  console.log('📦 Full OpenAI API response:', JSON.stringify(data, null, 2));
+  console.log('Full OpenAI API response:', JSON.stringify(data, null, 2));
 
   // Kiểm tra xem response có chứa error không
   if (data.error) {
-    console.error('❌ Error in OpenAI response:', data.error);
+    console.error('Error in OpenAI response:', data.error);
     throw new Error(data.error.message || 'OpenAI API returned error in response');
   }
 
   const content = data.choices?.[0]?.message?.content;
 
-  console.log('📝 Extracted content:', content);
-  console.log('📏 Content length:', content?.length || 0);
+  console.log('Extracted content:', content);
+  console.log('Content length:', content?.length || 0);
 
   const finishReason = data.choices?.[0]?.finish_reason;
-  console.log('🏁 Finish reason:', finishReason);
+  console.log('Finish reason:', finishReason);
 
   // Validate content trước khi parse
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
-    console.error('❌ No valid content in response:', data);
+    console.error('No valid content in response:', data);
     throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);
   }
 
@@ -616,35 +616,35 @@ async function callGeminiAPI(settings, prompt, controller, multimodalParts = nul
 
     // QUAN TRỌNG: Ném exception để dừng execution ngay lập tức
     const error = new Error(errorMessage || `Gemini API Error: ${response.status}`);
-    console.error('❌ Gemini API Error:', error);
+    console.error('Gemini API Error:', error);
     throw error;
   }
 
   const data = await response.json();
-  console.log('📦 Full Gemini API response:', JSON.stringify(data, null, 2));
+  console.log('Full Gemini API response:', JSON.stringify(data, null, 2));
 
   // Kiểm tra xem response có chứa error không (một số API trả về error trong response.ok = true)
   if (data.error) {
-    console.error('❌ Error in Gemini response:', data.error);
+    console.error('Error in Gemini response:', data.error);
     throw new Error(data.error.message || 'Gemini API returned error in response');
   }
 
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-  console.log('📝 Extracted content:', content);
-  console.log('📏 Content length:', content?.length || 0);
+  console.log('Extracted content:', content);
+  console.log('Content length:', content?.length || 0);
 
   // Kiểm tra xem có bị cắt không (finishReason)
   const finishReason = data.candidates?.[0]?.finishReason;
-  console.log('🏁 Finish reason:', finishReason);
+  console.log('Finish reason:', finishReason);
 
   if (finishReason && finishReason !== 'STOP') {
-    console.warn('⚠️ Response may be incomplete. Finish reason:', finishReason);
+    console.warn('Response may be incomplete. Finish reason:', finishReason);
   }
 
   // Validate content trước khi parse
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
-    console.error('❌ No valid content in response:', data);
+    console.error('No valid content in response:', data);
     throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);
   }
 
@@ -699,39 +699,39 @@ async function callAnthropicAPI(settings, prompt, controller, multimodalParts = 
     // Xử lý lỗi rate limit
     if (response.status === 429) {
       await sleep(60_000); // chờ 1 phút
-      throw new Error(`❌ Rate limit exceeded. Vui lòng đợi một chút.\n\nChi tiết: ${errorMessage}`);
+      throw new Error(`Rate limit exceeded. Vui lòng đợi một chút.\n\nChi tiết: ${errorMessage}`);
     }
 
     const error = new Error(errorMessage || `${CONFIG.MESSAGES.ANTHROPIC_ERROR}: ${response.status}`);
-    console.error('❌ Anthropic API Error:', error);
+    console.error('Anthropic API Error:', error);
     throw error;
   }
 
   const data = await response.json();
-  console.log('📦 Full Anthropic API response:', JSON.stringify(data, null, 2));
+  console.log('Full Anthropic API response:', JSON.stringify(data, null, 2));
 
   // Kiểm tra error trong response
   if (data.error) {
-    console.error('❌ Error in Anthropic response:', data.error);
+    console.error('Error in Anthropic response:', data.error);
     throw new Error(data.error.message || 'Anthropic API returned error in response');
   }
 
   // Anthropic trả về content trong content array
   const content = data.content?.[0]?.text;
 
-  console.log('📝 Extracted content:', content);
-  console.log('📏 Content length:', content?.length || 0);
+  console.log('Extracted content:', content);
+  console.log('Content length:', content?.length || 0);
 
   const stopReason = data.stop_reason;
-  console.log('🏁 Stop reason:', stopReason);
+  console.log('Stop reason:', stopReason);
 
   if (stopReason && stopReason !== 'end_turn') {
-    console.warn('⚠️ Response may be incomplete. Stop reason:', stopReason);
+    console.warn('Response may be incomplete. Stop reason:', stopReason);
   }
 
   // Validate content
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
-    console.error('❌ No valid content in response:', data);
+    console.error('No valid content in response:', data);
     throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);
   }
 
@@ -785,37 +785,37 @@ async function callDeepSeekAPI(settings, prompt, controller) {
     }
 
     if (response.status === 402 || errorMessage.toLowerCase().includes('insufficient balance')) {
-      throw new Error(`❌ Tài khoản DeepSeek hết tiền.\n\nVui lòng nạp thêm tại: https://platform.deepseek.com/usage\nHoặc chuyển sang provider khác trong cài đặt.`);
+      throw new Error(`Tài khoản DeepSeek hết tiền.\n\nVui lòng nạp thêm tại: https://platform.deepseek.com/usage\nHoặc chuyển sang provider khác trong cài đặt.`);
     }
 
     if (response.status === 429) {
       await sleep(60_000);
-      throw new Error(`❌ Rate limit DeepSeek exceeded. Vui lòng đợi một chút.\n\nChi tiết: ${errorMessage}`);
+      throw new Error(`Rate limit DeepSeek exceeded. Vui lòng đợi một chút.\n\nChi tiết: ${errorMessage}`);
     }
 
     const error = new Error(errorMessage || `${CONFIG.MESSAGES.DEEPSEEK_ERROR}: ${response.status}`);
-    console.error('❌ DeepSeek API Error:', error);
+    console.error('DeepSeek API Error:', error);
     throw error;
   }
 
   const data = await response.json();
-  console.log('📦 Full DeepSeek API response:', JSON.stringify(data, null, 2));
+  console.log('Full DeepSeek API response:', JSON.stringify(data, null, 2));
 
   if (data.error) {
-    console.error('❌ Error in DeepSeek response:', data.error);
+    console.error('Error in DeepSeek response:', data.error);
     throw new Error(data.error.message || 'DeepSeek API returned error in response');
   }
 
   const content = data.choices?.[0]?.message?.content;
 
-  console.log('📝 Extracted content:', content);
-  console.log('📏 Content length:', content?.length || 0);
+  console.log('Extracted content:', content);
+  console.log('Content length:', content?.length || 0);
 
   const finishReason = data.choices?.[0]?.finish_reason;
-  console.log('🏁 Finish reason:', finishReason);
+  console.log('Finish reason:', finishReason);
 
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
-    console.error('❌ No valid content in response:', data);
+    console.error('No valid content in response:', data);
     throw new Error(CONFIG.MESSAGES.INVALID_RESPONSE);
   }
 
@@ -825,7 +825,7 @@ async function callDeepSeekAPI(settings, prompt, controller) {
 // Parse response từ AI
 function parseAIResponse(content) {
   try {
-    console.log('🔍 Raw AI response:', content);
+    console.log('Raw AI response:', content);
 
     let jsonStr = content.trim();
 
@@ -834,20 +834,20 @@ function parseAIResponse(content) {
     const jsonEnd = jsonStr.lastIndexOf('}');
 
     if (jsonStart === -1 || jsonEnd === -1 || jsonStart > jsonEnd) {
-      console.error('❌ Không tìm thấy JSON object hợp lệ trong response');
-      console.error('📄 Content:', content);
+      console.error('Không tìm thấy JSON object hợp lệ trong response');
+      console.error('Content:', content);
       throw new Error('Response không chứa JSON object hợp lệ');
     }
 
     // BƯỚC 2: Trích xuất chỉ phần JSON (bỏ qua markdown và text thừa)
     jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
 
-    console.log('🔧 Extracted JSON string:', jsonStr);
+    console.log('Extracted JSON string:', jsonStr);
 
     // BƯỚC 3: Parse JSON
     const parsed = JSON.parse(jsonStr);
 
-    console.log('✅ Parsed JSON:', parsed);
+    console.log('Parsed JSON:', parsed);
 
     // BƯỚC 4: Validate
     if (!parsed.answer || !parsed.explanation) {
@@ -859,8 +859,8 @@ function parseAIResponse(content) {
 
     return parsed;
   } catch (error) {
-    console.error('❌ Parse error:', error);
-    console.error('📄 Original content:', content);
+    console.error('Parse error:', error);
+    console.error('Original content:', content);
 
     // Hiển thị error message rõ ràng hơn
     let errorMsg = `Không thể parse kết quả từ AI: ${error.message}`;

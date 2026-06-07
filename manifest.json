@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Trợ Lý Học Tập HOU E-Learning AI",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Trợ lý học tập AI hỗ trợ sinh viên HOU học online hiệu quả hơn trên hệ thống E-Learning.",
   "permissions": [
     "activeTab",

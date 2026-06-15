@@ -23,7 +23,9 @@ const CONFIG = {
     BASE_URL: 'https://generativelanguage.googleapis.com',
     DEFAULT_MODEL: 'gemini-3.5-flash',
     MODELS: [
+      { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview (Mạnh nhất, Đa phương tiện)' },
       { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash (Khuyên dùng - Mới nhất, Free)' },
+      { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview (Nhanh, Đa phương tiện)' },
       { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite (Nhanh & Rẻ nhất)' }
     ],
     API_KEY_PREFIX: 'AIza',
@@ -104,7 +106,7 @@ const CONFIG = {
 
   // Backend API Configuration
   BACKEND_API: {
-    BASE_URL: 'https://localhost:61930',
+    BASE_URL: 'https://localhost:7080',
     ENDPOINTS: {
       RESOLVE: '/api/questions/resolve',
       SAVE: '/api/questions/save',

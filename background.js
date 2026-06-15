@@ -9,7 +9,7 @@ const CONFIG = {
     REQUEST_TIMEOUT: 30000
   },
   BACKEND_API: {
-    BASE_URL: 'https://localhost:61930',
+    BASE_URL: 'https://localhost:7080',
     ENDPOINTS: {
       RESOLVE: '/api/questions/resolve',
       SAVE: '/api/questions/save',

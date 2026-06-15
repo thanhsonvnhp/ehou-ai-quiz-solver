@@ -420,7 +420,7 @@ async function saveQuizResults() {
     });
 
     updateWidgetStatus(
-      `[OK] Đã lưu ${response.savedCount}/${response.total} câu hỏi vào database!`,
+      `[OK] Đã ghi nhận ${response.savedCount}/${response.total} câu hỏi và đáp án vào hệ thống!`,
       'success'
     );
     saveBtn.innerHTML = `${extIcon('ok')} Đã lưu (${response.savedCount}/${response.total})`;
@@ -734,6 +734,8 @@ async function handleWidgetSolve() {
       }
 
       const question = questions[i];
+      question.courseCode = extractCourseCode();
+      question.sourceUrl = window.location.href;
 
       if (question.hasAnswer) {
         displayWidgetSkipped(question);

@@ -57,6 +57,14 @@ function extractQuestionsFromPage() {
 
   return questions;
 }
+// Chuẩn hóa URL pluginfile.php trong text gửi server (server băm text này) về dạng ổn định: pluginfile.php/question/{area}/{itemId}/{filename}
+// Bỏ contextId, questionId, slot — các segment thay đổi theo lượt làm bài/câu hỏi
+// Mảng questionImages/optionImages giữ nguyên URL đầy đủ để click xem ảnh
+function normalizeMoodlePluginUrl(src) {
+  const m = src.match(/pluginfile\.php\/\d+\/(question\/[a-z]+)\/(.+?)(?:[?#]|$)/i);
+  if (!m) return src;
+  return `pluginfile.php/${m[1]}/${m[2].split('/').slice(-2).join('/')}`;
+}
 
 // Lấy tất cả URL ảnh từ một element (loại bỏ icon hệ thống)
 function extractImages(el) {
@@ -76,7 +84,7 @@ function extractTextWithImages(el) {
       if (node.tagName === 'IMG') {
         const src = node.src || '';
         if (src && !src.includes('/theme/image.php') && !src.includes('grade_correct') && !src.includes('grade_incorrect')) {
-          parts.push(' ' + src + ' ');
+          parts.push(' ' + normalizeMoodlePluginUrl(src) + ' ');
         }
       } else {
         node.childNodes.forEach(walk);
@@ -168,7 +176,7 @@ function normalizeAnswerText(text) {
 }
 
 // Highlight đáp án đúng
-function highlightCorrectAnswer(questionIndex, answerLabel, autoCheck = false) {
+function highlightCorrectAnswer(questionIndex, answerLabel, autoCheck = false, explanation = '', fromCache = false) {
   const questions = document.querySelectorAll('.que.multichoice, .que');
 
   if (questionIndex < 0 || questionIndex >= questions.length) {
@@ -183,7 +191,7 @@ function highlightCorrectAnswer(questionIndex, answerLabel, autoCheck = false) {
   // Tìm index đáp án: ưu tiên chữ cái A/B/C/D, fallback so khớp text
   let targetAnswer = null;
 
-  const singleLetter = answerLabel.trim().match(/^([A-Za-z])\.?$/);
+  const singleLetter = answerLabel.trim().match(/^(?:đáp\s*án\s*(?:đúng\s*là)?[:\s]*)?([A-Za-z])\.?$/i);
   if (singleLetter) {
     const answerIndex = singleLetter[1].toUpperCase().charCodeAt(0) - 65;
     if (answerIndex >= 0 && answerIndex < answerEls.length) {
@@ -194,15 +202,21 @@ function highlightCorrectAnswer(questionIndex, answerLabel, autoCheck = false) {
   // Fallback: so khớp text nếu AI trả về nội dung đáp án thay vì chữ cái
   if (!targetAnswer) {
     const normalizedLabel = normalizeAnswerText(answerLabel);
-    for (const el of answerEls) {
+    const containsOption = [];
+    const containsLabel = [];
+    Array.from(answerEls).forEach((el, i) => {
       const label = el.querySelector('label');
-      if (!label) continue;
-      const text = normalizeAnswerText(label.innerText || label.textContent);
-      if (text === normalizedLabel || text.includes(normalizedLabel) || normalizedLabel.includes(text)) {
-        targetAnswer = el;
-        break;
-      }
-    }
+      if (!label) return;
+      // Cung nguồn hàm với lúc trích xuất/cache: innerText của <br> khác extractTextWithImages
+      const text = normalizeAnswerText(getLabelTextWithImages(label, i));
+      if (!text || !normalizedLabel) return;
+      if (text === normalizedLabel) { targetAnswer = el; return; }
+      if (text.includes(normalizedLabel)) containsOption.push({ el, len: text.length });
+      else if (normalizedLabel.includes(text)) containsLabel.push({ el, len: text.length });
+    });
+    // Option ngắn nhất chứa label (tránh đáp án B là prefix của C/D); ngược lại: option dài nhất nằm trong label
+    if (!targetAnswer && containsOption.length) targetAnswer = containsOption.sort((a, b) => a.len - b.len)[0].el;
+    if (!targetAnswer && containsLabel.length) targetAnswer = containsLabel.sort((a, b) => b.len - a.len)[0].el;
   }
 
   if (targetAnswer) {
@@ -217,26 +231,41 @@ function highlightCorrectAnswer(questionIndex, answerLabel, autoCheck = false) {
     }
 
     questionEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    addAISuggestionBadge(targetAnswer);
+    addAISuggestionBadge(targetAnswer, explanation, fromCache);
   }
 }
 
-function addAISuggestionBadge(answerEl) {
+function addAISuggestionBadge(answerEl, explanation = '', fromCache = false) {
   if (answerEl.querySelector('.ai-suggestion-badge')) return;
   const badge = document.createElement('span');
   badge.className = 'ai-suggestion-badge';
-  badge.innerHTML = `${extIcon('ok')} AI Suggested`;
-  answerEl.appendChild(badge);
+  // fromCache = đáp án từ backend cache -> "Suggested"; AI giải trực tiếp -> "AI Suggested"
+  badge.textContent = fromCache ? 'Suggested' : 'AI Suggested';
+  // Block riêng 1 dòng (width:fit-content): nằm inline cùng text sẽ bị theme Moodle lệch font/padding
+  badge.style.cssText = 'display:inline-flex!important;align-items:center!important;width:fit-content!important;box-sizing:border-box!important;position:relative!important;clear:both!important;float:none!important;margin:6px 0 0 4px!important;padding:4px 14px!important;border:0!important;border-radius:20px!important;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)!important;color:#fff!important;font-size:12px!important;font-weight:600!important;line-height:1.4!important;letter-spacing:normal!important;text-indent:0!important;text-transform:none!important;white-space:nowrap!important;text-align:center!important;box-shadow:0 2px 8px rgba(102,126,234,.4)!important;';
+  const label = answerEl.querySelector('label');
+  if (label && label.nextSibling) answerEl.insertBefore(badge, label.nextSibling);
+  else answerEl.appendChild(badge);
+  if (explanation.trim()) {
+    const exp = document.createElement('div');
+    exp.className = 'ai-explanation';
+    exp.textContent = explanation.trim();
+    // Inline + !important: CSS của theme Moodle ghi đè padding/margin/color làm chữ đâm vào border
+    exp.style.cssText = 'display:block!important;clear:both!important;position:relative!important;box-sizing:border-box!important;margin:8px 8px 4px!important;padding:8px 12px!important;background:rgba(76,175,80,.12)!important;border:0!important;border-left:4px solid #4caf50!important;border-radius:4px!important;font-size:13px!important;font-weight:400!important;line-height:1.6!important;color:#1b5e20!important;white-space:pre-wrap!important;text-indent:0!important;float:none!important;';
+    answerEl.appendChild(exp);
+  }
 }
 
 function clearHighlightForQuestion(questionEl) {
   questionEl.querySelectorAll('.ai-highlight-correct').forEach(el => el.classList.remove('ai-highlight-correct'));
   questionEl.querySelectorAll('.ai-suggestion-badge').forEach(badge => badge.remove());
+  questionEl.querySelectorAll('.ai-explanation').forEach(el => el.remove());
 }
 
 function clearAllHighlights() {
   document.querySelectorAll('.ai-highlight-correct').forEach(el => el.classList.remove('ai-highlight-correct'));
   document.querySelectorAll('.ai-suggestion-badge').forEach(badge => badge.remove());
+  document.querySelectorAll('.ai-explanation').forEach(el => el.remove());
 }
 
 // ========== QUIZ RESULT DETECTION & SAVE ==========
@@ -763,7 +792,8 @@ async function handleWidgetSolve() {
           answerText: result.answerText || result.answer
         });
         persistAIResults();
-        highlightCorrectAnswer(i, result.answer, true);
+        // Dùng question.index = vị trí thật trong DOM (danh sách questions đã bị lọc câu lỗi trích xuất)
+        highlightCorrectAnswer(question.index, result.answer, true, result.explanation, result.fromCache);
         displayWidgetResult(question, result);
         document.getElementById('ai-widget-solved').textContent = widgetState.results.length;
 

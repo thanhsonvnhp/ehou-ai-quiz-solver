@@ -553,3 +553,19 @@
     color: #a5d6a7 !important;
   }
 }
+
+.ai-explanation {
+  display: block;
+  position: relative;
+  clear: both;
+  margin: 6px 0 0 4px;
+  padding: 6px 10px;
+  background: rgba(76, 175, 80, 0.1);
+  border-left: 3px solid #4caf50;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #1b5e20 !important; /* thắng rule ".ai-highlight-correct * { color: inherit !important }" của extension */
+  white-space: pre-wrap;
+}
